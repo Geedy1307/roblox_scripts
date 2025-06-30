@@ -419,7 +419,6 @@ xpcall(function()
 		local estimatedTime = speedFactor / distance
 		local adjustedLerpAlpha = math.min(estimatedTime, 1)
 
-		-- Create or reuse BodyPosition for anti-gravity
 		if not clientRoot:FindFirstChild("AntiGravityLock") then
 			bodyPosition = Instance.new("BodyPosition")
 			bodyPosition.Name = "AntiGravityLock"
@@ -433,11 +432,11 @@ xpcall(function()
 			clientRoot.CFrame = clientRoot.CFrame:lerp(CFrame.new(target.Position), adjustedLerpAlpha)
 			bodyPosition.Position = Vector3.new(clientRoot.Position.X, target.Position.Y, clientRoot.Position.Z)
 		else
-			if (MonstersAlert() and MonstersClose(20)) or (MonstersAlert() and distance <= 10) then
-				clientRoot.CFrame = CFrame.new(clientRoot.Position.X, (target.Position.Y - 2.25), clientRoot.Position.Z)
+			if (MonstersAlert() and MonstersClose(20)) or (MonstersAlert() and distance <= 20) then
+				clientRoot.CFrame = CFrame.new(clientRoot.Position.X, (target.Position.Y - 2.3), clientRoot.Position.Z)
 			end
-			clientRoot.CFrame = clientRoot.CFrame:lerp(CFrame.new(target.Position.X, (target.Position.Y - 2.25), target.Position.Z), adjustedLerpAlpha)
-			bodyPosition.Position = Vector3.new(clientRoot.Position.X, target.Position.Y - 2.25, clientRoot.Position.Z)
+			clientRoot.CFrame = clientRoot.CFrame:lerp(CFrame.new(target.Position.X, (target.Position.Y - 2.3), target.Position.Z), adjustedLerpAlpha)
+			bodyPosition.Position = Vector3.new(clientRoot.Position.X, target.Position.Y - 2.3, clientRoot.Position.Z)
 		end
 	end
 
