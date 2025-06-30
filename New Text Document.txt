@@ -1,0 +1,30 @@
+local TeleportService = game:GetService("TeleportService")
+
+local teleportData = TeleportService:GetLocalPlayerTeleportData()
+
+rconsoleprint("[Built-in Teleport Data]\n")
+
+if teleportData then
+    for key, value in pairs(teleportData) do
+        rconsoleprint(string.format("%s: %s", tostring(key), tostring(value)))
+    end
+else
+    rconsoleprint("No teleport data was received.\n")
+end
+
+
+
+
+
+
+game.CoreGui:WaitForChild("RobloxPromptGui").promptOverlay.ChildAdded:Connect(function(v)
+    if v.Name == "ErrorPrompt" then
+        pcall(function()
+            local errorFrame = game.CoreGui.RobloxPromptGui.promptOverlay.ErrorPrompt.MessageArea.ErrorFrame
+            repeat task.wait(.5) until errorFrame:FindFirstChild("ErrorMessage")
+            if tonumber(errorFrame.ErrorMessage.Text:split("\n")[2]:match("%d+")) ~= 772 and tonumber(errorFrame.ErrorMessage.Text:split("\n")[2]:match("%d+")) ~= 773 then
+                game:GetService("TeleportService"):Teleport(game.PlaceId, game:GetService("Players").LocalPlayer)
+            end
+        end)
+    end
+end)
