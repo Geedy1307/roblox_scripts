@@ -1,0 +1,1 @@
+loadstring(game:HttpGet("https://raw.githubusercontent.com/Geedy1307/roblox_scripts/refs/heads/main/working/DandyWorld.lua"))()
