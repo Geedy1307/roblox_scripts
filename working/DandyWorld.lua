@@ -7,6 +7,19 @@ local function waitForChild(parent, options)
 	local className = options.ClassName
 	local found = nil
 
+	if name and className then
+		local candidate = parent:FindFirstChild(name)
+		if candidate and candidate:IsA(className) then
+			return candidate
+		end
+	elseif name then
+		found = parent:FindFirstChild(name)
+		if found then return found end
+	elseif className then
+		found = parent:FindFirstChildWhichIsA(className)
+		if found then return found end
+	end
+
 	while wait() do
 		if name and className then
 			local candidate = parent:FindFirstChild(name)
@@ -24,7 +37,6 @@ local function waitForChild(parent, options)
 
 	return found
 end
-
 
 repeat wait() until game:IsLoaded()
 waitForChild(waitForChild(workspace, { Name = "CurrentRoom" }), {ClassName = "Model"})
@@ -425,8 +437,6 @@ xpcall(function()
 
 	local bodyPosition
 	local function lerpTo(target)
-		if not clientRoot then return end
-
 		local distance = (clientRoot.Position - target.Position).magnitude
 		local speedFactor = (60*wait())
 		local estimatedTime = speedFactor / distance
@@ -581,14 +591,14 @@ xpcall(function()
 						if not Settings.AutoFarm then break end
 						if generator.Stats.ActivePlayer.Value and tostring(generator.Stats.ActivePlayer.Value) ~= Client.Name then break end
 
-						-- if monstersClose(20) or monstersAlert() then
-						-- 	generator.Stats.StopInteracting:FireServer("Stop")
-						-- 	generator = generators()
-						-- else
+						if monstersClose(20) or monstersAlert() then
+							generator.Stats.StopInteracting:FireServer("Stop")
+							generator = generators()
+						else
 							if (clientRoot.Position - generator.PrimaryPart.Position).magnitude <= 2 then
 								interactPrompt(generator)
 							end
-						-- end
+						end
 
 						lerpTo(generator.PrimaryPart)
 					until generator.Stats.Completed.Value
