@@ -612,7 +612,7 @@ xpcall(function()
 							end
 						until IncompleteGenerator()
 						debounce = false
-					elsea
+					else
 						StateCollide(workspace.CurrentRoom, false)
 						StateCollide(workspace.Elevators, false)
 
