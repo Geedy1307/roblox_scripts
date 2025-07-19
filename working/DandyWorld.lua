@@ -20,9 +20,6 @@ local Settings = HttpS:JSONDecode(readfile(FileName))
 function saveSettings() writefile(FileName, HttpS:JSONEncode(Settings)) end
 
 local USERCONSOLE = false
-local Version = "0.0.1"
-local SubVersion = "L_Kain"
-
 if not (rconsolecreate and rconsolesettitle) then
 	USERCONSOLE = false
 end
@@ -633,13 +630,15 @@ xpcall(function()
 		Library:Unload()
 	end)
 
+	local Version = "0.0.2"
+	local Author = "Kain"
 	local Window = Library:CreateWindow({
 		Title = "Dandys World",
 		Center = true,
 		AutoShow = true,
         ShowCustomCursor = false,
         ToggleKeybind = Enum.KeyCode.RightControl,
-		Footer = "Version: " .. Version .. " | " .. SubVersion,
+		Footer = "Version: " .. Version .. " | " .. Author,
 		Size = UDim2.fromOffset(700, 400),
 	})
 
