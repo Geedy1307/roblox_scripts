@@ -195,7 +195,6 @@ setmetatable(Cleaner, {
 
 xpcall(function()
 	local Lighting = game:GetService("Lighting")
-	local UserInputService = game:GetService("UserInputService")
 	local VirtualInputManager = game:GetService("VirtualInputManager")
 	local ReplicatedStorage = game:GetService("ReplicatedStorage")
 	local Players = game:GetService("Players")
@@ -665,8 +664,7 @@ xpcall(function()
 	coroutine.resume(loopAutoFarm)
 
     --[[ UI *]]
-    local Repository = "https://raw.githubusercontent.com/deividcomsono/Obsidian/refs/heads/main/"
-	local Library = loadstring(game:HttpGet(Repository .. "Library.lua"))()
+	local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/deividcomsono/Obsidian/refs/heads/main/Library.lua"))()
     Cleaner.GetCleanEvent():Connect(function()
 		Library:Unload()
 	end)
@@ -797,6 +795,6 @@ xpcall(function()
 		Cleaner.Clean()
 		rconsoledestroy()
 	end)
-end, function(Error)
-	warn(debug.traceback("[Error]: " .. tostring(Error), 2))
+end, function(err)
+	warn(debug.traceback("[Error]: " .. tostring(err), 2))
 end)
