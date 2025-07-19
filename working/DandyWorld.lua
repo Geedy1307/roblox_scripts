@@ -575,8 +575,6 @@ xpcall(function()
 						else
 							if (clientRoot.Position - generator.PrimaryPart.Position).Magnitude <= 2 then
 								interactPrompt(generator)
-								wait(1)
-								clientRoot.CFrame = CFrame.new(clientRoot.Position.X, generator.PrimaryPart.Position.Y - 2.5, clientRoot.Position.Z)
 							end
 						end
 
@@ -614,7 +612,7 @@ xpcall(function()
 							end
 						until IncompleteGenerator()
 						debounce = false
-					else
+					elsea
 						StateCollide(workspace.CurrentRoom, false)
 						StateCollide(workspace.Elevators, false)
 
@@ -648,7 +646,7 @@ xpcall(function()
 		Library:Unload()
 	end)
 
-	local Version = "0.0.3"
+	local Version = "0.0.2.1"
 	local Author = "Kain"
 	local Window = Library:CreateWindow({
 		Title = "Dandys World",
