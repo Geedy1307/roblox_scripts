@@ -1,25 +1,30 @@
 local wait = task.wait
+
 local function waitForChild(parent, options)
 	assert(parent and parent:IsA("Instance"), "Parent must be a valid Instance")
 
 	local name = options.Name
 	local className = options.ClassName
-	local timeout = options.Timeout or math.huge
+	local found = nil
 
-	local start = tick()
-
-	repeat wait()
-		for _, child in next, parent:GetChildren() do
-			local nameMatch = not name or child.Name == name
-			local classMatch = not className or child:IsA(className)
-			if nameMatch and classMatch then
-				return child
+	while wait() do
+		if name and className then
+			local candidate = parent:FindFirstChild(name)
+			if candidate and candidate:IsA(className) then
+				found = candidate
 			end
+		elseif name then
+			found = parent:FindFirstChild(name)
+		elseif className then
+			found = parent:FindFirstChildWhichIsA(className)
 		end
-	until (tick() - start) > timeout
 
-	return nil
+		if found then break end
+	end
+
+	return found
 end
+
 
 repeat wait() until game:IsLoaded()
 waitForChild(waitForChild(workspace, { Name = "CurrentRoom" }), {ClassName = "Model"})
