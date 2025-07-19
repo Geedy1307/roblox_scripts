@@ -1,8 +1,28 @@
 local wait = task.wait
+local function waitForChild(parent, options)
+	assert(parent and parent:IsA("Instance"), "Parent must be a valid Instance")
+
+	local name = options.Name
+	local className = options.ClassName
+	local timeout = options.Timeout or math.huge
+
+	local start = tick()
+
+	repeat wait()
+		for _, child in next, parent:GetChildren() do
+			local nameMatch = not name or child.Name == name
+			local classMatch = not className or child:IsA(className)
+			if nameMatch and classMatch then
+				return child
+			end
+		end
+	until (tick() - start) > timeout
+
+	return nil
+end
 
 repeat wait() until game:IsLoaded()
-repeat wait() until workspace:FindFirstChild('CurrentRoom')
-repeat wait() until workspace.CurrentRoom:FindFirstChildOfClass("Model")
+waitForChild(waitForChild(workspace, { Name = "CurrentRoom" }), {ClassName = "Model"})
 
 local defaultSettings = {
     FullBright = false,
@@ -14,7 +34,7 @@ local defaultSettings = {
     KeyMacroBassie = "Z",
 }
 local HttpS = game:GetService("HttpService")
-local FileName = 'dandys_world(ID_'..game.Players.LocalPlayer.UserId..').json'
+local FileName = 'dandys_world(ID_'..game:GetService("Players").LocalPlayer.UserId..').json'
 if not pcall(function() readfile(FileName) end) then writefile(FileName, HttpS:JSONEncode(defaultSettings)) end
 local Settings = HttpS:JSONDecode(readfile(FileName))
 function saveSettings() writefile(FileName, HttpS:JSONEncode(Settings)) end
@@ -159,32 +179,29 @@ setmetatable(Cleaner, {
 xpcall(function()
 	local Lighting = game:GetService("Lighting")
 	local UserInputService = game:GetService("UserInputService")
-	local VirtualInputManager = game:GetService("VirtualInputManager");
+	local VirtualInputManager = game:GetService("VirtualInputManager")
 	local ReplicatedStorage = game:GetService("ReplicatedStorage")
 	local Players = game:GetService("Players")
 	local Client = Players.LocalPlayer
-	local ScreenGui = Client.PlayerGui:WaitForChild("ScreenGui")
-	local Menu = ScreenGui:WaitForChild("Menu")
-	local SkillCheckFrame = Menu:WaitForChild("SkillCheckFrame")
-	local Marker = SkillCheckFrame:WaitForChild("Marker")
-	local GoldArea = SkillCheckFrame:WaitForChild("GoldArea")
+	local ScreenGui = waitForChild(Client.PlayerGui, { Name = "ScreenGui", ClassName = "ScreenGui" })
+	local Menu = waitForChild(ScreenGui, { Name = "Menu", ClassName = "Frame" })
+	local SkillCheckFrame = waitForChild(Menu, { Name = "SkillCheckFrame", ClassName = "Frame" })
+	local Marker = waitForChild(SkillCheckFrame, { Name = "Marker", ClassName = "GuiObject" })
+	local GoldArea = waitForChild(SkillCheckFrame, { Name = "GoldArea", ClassName = "Frame" })
 
 	local Character = Client.Character or Client.CharacterAdded:Wait()
 	local clientStats = Character:WaitForChild('Stats')
 	Client.CharacterAdded:Connect(function(newChar)
 		Character = newChar
-		clientRoot = Character:WaitForChild("HumanoidRootPart")
-		clientHumanoid = Character:WaitForChild("Humanoid")
-		clientInventory = Character:WaitForChild("Inventory")
 	end)
-	clientRoot = Character:WaitForChild("HumanoidRootPart")
-	clientHumanoid = Character:WaitForChild("Humanoid")
-	clientInventory = Character:WaitForChild("Inventory")
+	local clientRoot = waitForChild(Character, { Name = "HumanoidRootPart" })
+	local clientHumanoid = waitForChild(Character, { Name = "Humanoid" })
+	local clientInventory = waitForChild(Character, { Name = "Inventory" })
 
 	Client.CameraMaxZoomDistance = 200
 
-	local VirtualUser = game:service("VirtualUser")
-	game:service("Players").LocalPlayer.Idled:Connect(function()
+	local VirtualUser = game:GetService("VirtualUser")
+	game:GetService("Players").LocalPlayer.Idled:Connect(function()
 		VirtualUser:CaptureController()
 		VirtualUser:ClickButton2(Vector2.new())
 	end)
@@ -231,11 +248,8 @@ xpcall(function()
 
 	--[[ Bassie Macro ]]
 	local function collectClosestItems()
-		local currentRoom = workspace:FindFirstChild("CurrentRoom")
-		if not currentRoom then return end
-		
-		local model = currentRoom:FindFirstChildOfClass("Model")
-		if not model then return end
+		local currentRoom = waitForChild(workspace, { Name = "CurrentRoom" })
+		local model = waitForChild(currentRoom, { ClassName = "Model" })
 
 		for _, folder in next, model:GetChildren() do
 			if folder:IsA("Folder") and folder.Name == "Items" then
@@ -260,16 +274,16 @@ xpcall(function()
 
 	local TOLERANCE = 10
 
-	local function isWithinGoldArea(marker, goldArea)
-		local pos, size = goldArea.AbsolutePosition, goldArea.AbsoluteSize
-		local markerX = marker.AbsolutePosition.X
+	local function isWithinGoldArea(mark, area)
+		local pos, size = area.AbsolutePosition, area.AbsoluteSize
+		local markerX = mark.AbsolutePosition.X
 		return markerX >= pos.X and markerX <= pos.X + size.X + TOLERANCE
 	end
 
 	local function tryAutoSkillCheck()
 		if SkillCheckFrame.Visible and Settings.AutoSkillCheck then
-			local marker = SkillCheckFrame:WaitForChild("Marker")
-			local goldArea = SkillCheckFrame:WaitForChild("GoldArea")
+			local marker = waitForChild(SkillCheckFrame, { Name = "Marker", ClassName = "GuiObject" })
+			local goldArea = waitForChild(SkillCheckFrame, { Name = "GoldArea", ClassName = "Frame" })
 			if marker and goldArea and isWithinGoldArea(marker, goldArea) then
 				VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
 			end
@@ -287,11 +301,11 @@ xpcall(function()
 	end
 
 	bindChanges(SkillCheckFrame)
-	bindChanges(SkillCheckFrame:WaitForChild("Marker"))
-	bindChanges(SkillCheckFrame:WaitForChild("GoldArea"))
+	bindChanges(Marker)
+	bindChanges(GoldArea)
 
 	--[[ ESP ]]
-	local function ApplyESP(target,fillcolor)
+	local function addESP(target,fillcolor)
 		if not target:FindFirstChild("TargetESP") then
 			local highlight = Instance.new("Highlight", target)
 			highlight.Name = "TargetESP"
@@ -305,12 +319,9 @@ xpcall(function()
 		end
 	end
 
-	local function ApplyImportantModelESP()
-		local currentRoom = workspace:FindFirstChild("CurrentRoom")
-		if not currentRoom then return end
-		
-		local model = currentRoom:FindFirstChildOfClass("Model")
-		if not model then return end
+	local function applyESP()
+		local currentRoom = waitForChild(workspace, { Name = "CurrentRoom" })
+		local model = waitForChild(currentRoom, { ClassName = "Model" })
 
 		local usefulItems = {'Bandage','HealthKit','ChocolateBox','Valve','JumperCable','EjectButton','Instructions','SmokeBomb'}
 		
@@ -326,11 +337,11 @@ xpcall(function()
 						local highlight = child:FindFirstChild("TargetESP")
 						if Settings.ESPNeededModels and not highlight then
 							if child.Name == 'Generator' then
-								ApplyESP(child, Color3.fromRGB(57,255,20))
+								addESP(child, Color3.fromRGB(57,255,20))
 							elseif table.find(usefulItems, child.Name) then
-								ApplyESP(child, Color3.fromRGB(0,255,255))
+								addESP(child, Color3.fromRGB(0,255,255))
 							elseif child:FindFirstChild("HumanoidRootPart") then
-								ApplyESP(child, Color3.fromRGB(255,25,25))
+								addESP(child, Color3.fromRGB(255,25,25))
 							end
 						elseif not Settings.ESPNeededModels and highlight then
 							highlight:Destroy()
@@ -342,7 +353,7 @@ xpcall(function()
 	end
 
 	--[[ AutoFarm ]]
-	local function BackToElevator()
+	local function backToElevator()
 		if workspace:FindFirstChild("BaseplateTrigger") then
 			firetouchinterest(clientRoot, workspace.BaseplateTrigger, 0)
 			wait(.1)
@@ -350,13 +361,9 @@ xpcall(function()
 		end
 	end
 
-	local function SpecialAlerts()
-		local currentRoom = workspace:FindFirstChild("CurrentRoom")
-		if not currentRoom then return false end
-		
-		local model = currentRoom:FindFirstChildOfClass("Model")
-		if not model then return false end
-
+	local function specialAlerts()
+		local currentRoom = waitForChild(workspace, { Name = "CurrentRoom" })
+		local model = waitForChild(currentRoom, { ClassName = "Model" })
 		local danger = nil
 		
 		for _, folder in next, model:GetChildren() do
@@ -369,15 +376,13 @@ xpcall(function()
 				end
 			end
 		end
+
 		return danger
 	end
 
-	local function MonstersAlert()
-		local currentRoom = workspace:FindFirstChild("CurrentRoom")
-		if not currentRoom then return false end
-		
-		local model = currentRoom:FindFirstChildOfClass("Model")
-		if not model then return false end
+	local function monstersAlert()
+		local currentRoom = waitForChild(workspace, { Name = "CurrentRoom" })
+		local model = waitForChild(currentRoom, { ClassName = "Model" })
 		
 		for _, folder in next, model:GetChildren() do
 			if folder:IsA("Folder") and folder.Name == "Monsters" then
@@ -388,33 +393,33 @@ xpcall(function()
 				end
 			end
 		end
+
 		return false
 	end
 
-	local function MonstersClose(distance)
+	local function monstersClose(distance)
 		distance = distance or 30
-		local currentRoom = workspace:FindFirstChild("CurrentRoom")
-		if not currentRoom then return false end
-		
-		local model = currentRoom:FindFirstChildOfClass("Model")
-		if not model then return false end
+		local currentRoom = waitForChild(workspace, { Name = "CurrentRoom" })
+		local model = waitForChild(currentRoom, { ClassName = "Model" })
 		
 		local blockList = {"RazzleDazzleMonster", "RodgerMonster"}
 		for _, folder in next, model:GetChildren() do
 			if folder:IsA("Folder") and folder.Name == "Monsters" then
 				for _, monster in next, folder:GetChildren() do
 					if monster:IsA("Model") and monster.PrimaryPart and not table.find(blockList, monster.Name) then
-						if (clientRoot.Position - monster.PrimaryPart.Position).Magnitude <= distance then
+						if (clientRoot.Position - monster.PrimaryPart.Position).magnitude <= distance then
 							return true
 						end
 					end
 				end
 			end
 		end
+
 		return false
 	end
 
-	local function OneTimeLerpTo(target)
+	local bodyPosition
+	local function lerpTo(target)
 		if not clientRoot then return end
 
 		local distance = (clientRoot.Position - target.Position).magnitude
@@ -431,11 +436,11 @@ xpcall(function()
 			bodyPosition.Parent = clientRoot
 		end
 
-		if distance <= 20 and not MonstersAlert() and not MonstersClose(50) then
+		if distance <= 20 and not monstersAlert() and not monstersClose(50) then
 			clientRoot.CFrame = clientRoot.CFrame:lerp(CFrame.new(target.Position), adjustedLerpAlpha)
 			bodyPosition.Position = Vector3.new(clientRoot.Position.X, target.Position.Y, clientRoot.Position.Z)
 		else
-			if (MonstersAlert() and MonstersClose(20)) or (MonstersAlert() and distance <= 20) then
+			if (monstersAlert() and monstersClose(20)) or (monstersAlert() and distance <= 20) then
 				clientRoot.CFrame = CFrame.new(clientRoot.Position.X, (target.Position.Y - 2.3), clientRoot.Position.Z)
 			end
 			clientRoot.CFrame = clientRoot.CFrame:lerp(CFrame.new(target.Position.X, (target.Position.Y - 2.3), target.Position.Z), adjustedLerpAlpha)
@@ -443,12 +448,9 @@ xpcall(function()
 		end
 	end
 
-	local function IncompleteGenerator()
-		local currentRoom = workspace:FindFirstChild("CurrentRoom")
-		if not currentRoom then return false end
-
-		local model = currentRoom:FindFirstChildOfClass("Model")
-		if not model then return false end
+	local function generators()
+		local currentRoom = waitForChild(workspace, { Name = "CurrentRoom" })
+		local model = waitForChild(currentRoom, { ClassName = "Model" })
 
 		local sproutParts = {}
 		do
@@ -466,8 +468,7 @@ xpcall(function()
 		end
 
 		local nearestGen, shortestDistance = nil, math.huge
-		local generatorsFolder = model:FindFirstChild("Generators")
-		if not generatorsFolder then return false end
+		local generatorsFolder = waitForChild(model, {Name="Generators"})
 
 		for _, gen in next, generatorsFolder:GetChildren() do
 			local prompt = gen:FindFirstChild("Prompt")
@@ -480,14 +481,14 @@ xpcall(function()
 				if completed and activePlayer and not completed.Value and not activePlayer.Value then
 					local isNearDanger = false
 					for _, hrp in next, sproutParts do
-						if (prompt.Position - hrp.Position).Magnitude <= 30 then
+						if (prompt.Position - hrp.Position).magnitude <= 30 then
 							isNearDanger = true
 							break
 						end
 					end
 
 					if not isNearDanger then
-						local dist = (clientRoot.Position - tpPos.Position).Magnitude
+						local dist = (clientRoot.Position - tpPos.Position).magnitude
 						if dist < shortestDistance then
 							shortestDistance = dist
 							nearestGen = gen
@@ -501,9 +502,11 @@ xpcall(function()
 	end
 
 
-	local function GetBestCard()
-		local bestCards = {'Machine','Heal','Heal2'}
-		for i,v in next, workspace.Info.CardVote:GetChildren() do
+	local function bestCard()
+		local info = waitForChild(workspace, {Name="Info"})
+		local cardVote = waitForChild(info, {Name="CardVote"})
+
+		for i,v in next, cardVote:GetChildren() do
 			if v ~= nil and (v.Name == 'Heal' or v.Name == 'Heal2' or v.Name == 'Machine') then
 				return v
 			end
@@ -512,7 +515,7 @@ xpcall(function()
 		return nil
 	end
 
-	local function StateCollide(parent, state)
+	local function stateCollide(parent, state)
 		local ignoreNames = {
 			DoorHitbox = true,
 			DoorVisible = true,
@@ -528,7 +531,7 @@ xpcall(function()
 
     local loopApplyESP = coroutine.create(function()
 		while wait(1) do
-			ApplyImportantModelESP()
+			applyESP()
 		end
     end)
 
@@ -539,59 +542,64 @@ xpcall(function()
 		while task.wait(0.1) do
 			if not Settings.AutoFarm then continue end
 
-			local generator = IncompleteGenerator()
-			local inElevator = clientStats:FindFirstChild("InElevator") and clientStats.InElevator.Value
+			local generator = generators()
+
+			local inElevator = waitForChild(clientStats, {Name="InElevator"})
+			inElevator = inElevator.Value
+
+			local currentRoom = waitForChild(workspace, { Name = "CurrentRoom" })
+			local elevators = waitForChild(workspace, { Name = "Elevators" })
 
 			if generator then
 				if inElevator and not debounce then
-					StateCollide(workspace.CurrentRoom, true)
-					StateCollide(workspace.Elevators, true)
+					stateCollide(currentRoom, true)
+					stateCollide(elevators, true)
 
 					repeat wait()
 						clientRoot.CFrame = CFrame.new(clientRoot.Position.X, currentHeight, clientRoot.Position.Z)
 					until not Menu.Message.Visible or Menu.Message.Text:find("Elevator closes in")
 
-					StateCollide(workspace.CurrentRoom, false)
-					StateCollide(workspace.Elevators, false)
+					stateCollide(currentRoom, false)
+					stateCollide(elevators, false)
 
 					repeat wait()
 						if not Settings.AutoFarm then break end
-						OneTimeLerpTo(workspace.Elevators.Elevator.ForceZone)
-					until (clientRoot.Position - workspace.Elevators.Elevator.ForceZone.Position).Magnitude <= 3
+						lerpTo(elevators.Elevator.ForceZone)
+					until (clientRoot.Position - elevators.Elevator.ForceZone.Position).magnitude <= 3
 
-					generator = IncompleteGenerator()
+					generator = generators()
 					debounce = true
 				else
-					StateCollide(workspace.CurrentRoom, false)
-					StateCollide(workspace.Elevators, false)
+					stateCollide(currentRoom, false)
+					stateCollide(elevators, false)
 
 					repeat wait()
 						if not Settings.AutoFarm then break end
 						if generator.Stats.ActivePlayer.Value and tostring(generator.Stats.ActivePlayer.Value) ~= Client.Name then break end
 
-						if MonstersClose(20) or MonstersAlert() then
+						if monstersClose(20) or monstersAlert() then
 							generator.Stats.StopInteracting:FireServer("Stop")
-							generator = IncompleteGenerator()
+							generator = generators()
 						else
-							if (clientRoot.Position - generator.PrimaryPart.Position).Magnitude <= 2 then
+							if (clientRoot.Position - generator.PrimaryPart.Position).magnitude <= 2 then
 								interactPrompt(generator)
 							end
 						end
 
-						OneTimeLerpTo(generator.PrimaryPart)
+						lerpTo(generator.PrimaryPart)
 					until generator.Stats.Completed.Value
 					clientRoot.CFrame = CFrame.new(clientRoot.Position.X, generator.PrimaryPart.Position.Y - 2.5, clientRoot.Position.Z)
 				end
 
 			else
-				local alert = SpecialAlerts()
+				local alert = specialAlerts()
 				if alert then
 					repeat wait()
 						if not Settings.AutoFarm then break end
 
-						local base = workspace.Elevators.Elevator.Base
-						if (clientRoot.Position - base.Position).Magnitude > 30 then
-							BackToElevator()
+						local base = elevators.Elevator.Base
+						if (clientRoot.Position - base.Position).magnitude > 30 then
+							backToElevator()
 						else
 							clientRoot.Position = Vector3.new(clientRoot.Position.X, base.Position.Y - 2.3, clientRoot.Position.Z)
 							bodyPosition.Position = Vector3.new(clientRoot.Position.X, base.Position.Y - 2.3, clientRoot.Position.Z)
@@ -599,34 +607,37 @@ xpcall(function()
 					until not alert
 				else
 					if inElevator then
-						StateCollide(workspace.CurrentRoom, true)
-						StateCollide(workspace.Elevators, true)
+						stateCollide(currentRoom, true)
+						stateCollide(elevators, true)
 						repeat wait()
 							if not Settings.AutoFarm then break end
 
 							clientRoot.CFrame = CFrame.new(clientRoot.Position.X, currentHeight, clientRoot.Position.Z)
 
-							local bestCard = GetBestCard()
+							local bestCard = bestCard()
 							if bestCard then
 								ReplicatedStorage.Events.CardVoteEvent:FireServer(bestCard)
 							end
-						until IncompleteGenerator()
+						until generators()
 						debounce = false
 					else
-						StateCollide(workspace.CurrentRoom, false)
-						StateCollide(workspace.Elevators, false)
+						stateCollide(currentRoom, false)
+						stateCollide(elevators, false)
 
-						if workspace.Info.ElevatorPrompt.ClaimIcon.Enabled then
+						local info = waitForChild(workspace, {Name="Info"})
+						local elevatorPrompt = waitForChild(info, {Name="ElevatorPrompt"})
+						local claimIcon = waitForChild(elevatorPrompt, {Name="ClaimIcon"})
+						if claimIcon.Enabled then
 							repeat wait()
 								if not Settings.AutoFarm then break end
 
-								local base = workspace.Elevators.Elevator.Base
-								if (clientRoot.Position - base.Position).Magnitude > 30 then
-									BackToElevator()
+								local base = elevators.Elevator.Base
+								if (clientRoot.Position - base.Position).magnitude > 30 then
+									backToElevator()
 								else
-									OneTimeLerpTo(base)
+									lerpTo(base)
 								end
-							until not workspace.Info.ElevatorPrompt.ClaimIcon.Enabled
+							until not claimIcon.Enabled
 						end
 					end
 				end
@@ -646,7 +657,7 @@ xpcall(function()
 		Library:Unload()
 	end)
 
-	local Version = "0.0.2.1"
+	local Version = "0.0.2.2"
 	local Author = "Kain"
 	local Window = Library:CreateWindow({
 		Title = "Dandys World",
@@ -748,10 +759,10 @@ xpcall(function()
 			if not Settings.AutoFarm and clientRoot:FindFirstChild("AntiGravityLock") then
 				clientRoot.AntiGravityLock:Remove()
 				wait(.1)
-				BackToElevator()
+				backToElevator()
 				wait(.1)
-				StateCollide(workspace.CurrentRoom, true)
-				StateCollide(workspace.Elevators, true)
+				stateCollide(waitForChild(workspace, { Name = "CurrentRoom" }), true)
+				stateCollide(waitForChild(workspace, { Name = "Elevators" }), true)
 			end
 		end,
 	})
