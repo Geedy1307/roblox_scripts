@@ -506,7 +506,6 @@ xpcall(function()
 		return nearestGen
 	end
 
-
 	local function bestCard()
 		local info = waitForChild(workspace, {Name="Info"})
 		local cardVote = waitForChild(info, {Name="CardVote"})
@@ -544,7 +543,7 @@ xpcall(function()
 		local debounce = false
     	local currentHeight = clientRoot.Position.Y
 
-		while task.wait(0.1) do
+		while wait(0.1) do
 			if not Settings.AutoFarm then continue end
 
 			local generator = generators()
@@ -582,14 +581,14 @@ xpcall(function()
 						if not Settings.AutoFarm then break end
 						if generator.Stats.ActivePlayer.Value and tostring(generator.Stats.ActivePlayer.Value) ~= Client.Name then break end
 
-						if monstersClose(20) or monstersAlert() then
-							generator.Stats.StopInteracting:FireServer("Stop")
-							generator = generators()
-						else
+						-- if monstersClose(20) or monstersAlert() then
+						-- 	generator.Stats.StopInteracting:FireServer("Stop")
+						-- 	generator = generators()
+						-- else
 							if (clientRoot.Position - generator.PrimaryPart.Position).magnitude <= 2 then
 								interactPrompt(generator)
 							end
-						end
+						-- end
 
 						lerpTo(generator.PrimaryPart)
 					until generator.Stats.Completed.Value
