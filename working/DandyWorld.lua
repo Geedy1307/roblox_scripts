@@ -364,6 +364,7 @@ xpcall(function()
 				for _, object in next, folder:GetChildren() do
 					if object.Name == "SproutTendril" and object:FindFirstChild("HumanoidRootPart") then
 						danger = object
+						break
 					end
 				end
 			end
@@ -568,12 +569,14 @@ xpcall(function()
 						if not Settings.AutoFarm then break end
 						if generator.Stats.ActivePlayer.Value and tostring(generator.Stats.ActivePlayer.Value) ~= Client.Name then break end
 
-						if MonstersClose(20) or MonstersAlert() or SpecialAlerts() then
+						if MonstersClose(20) or MonstersAlert() then
 							generator.Stats.StopInteracting:FireServer("Stop")
 							generator = IncompleteGenerator()
 						else
 							if (clientRoot.Position - generator.PrimaryPart.Position).Magnitude <= 2 then
 								interactPrompt(generator)
+								wait(1)
+								clientRoot.CFrame = CFrame.new(clientRoot.Position.X, generator.PrimaryPart.Position.Y - 2.5, clientRoot.Position.Z)
 							end
 						end
 
@@ -583,35 +586,50 @@ xpcall(function()
 				end
 
 			else
-				if inElevator then
-					StateCollide(workspace.CurrentRoom, true)
-					StateCollide(workspace.Elevators, true)
+				local alert = SpecialAlerts()
+				if alert then
 					repeat wait()
 						if not Settings.AutoFarm then break end
 
-						clientRoot.CFrame = CFrame.new(clientRoot.Position.X, currentHeight, clientRoot.Position.Z)
-
-						local bestCard = GetBestCard()
-						if bestCard then
-							ReplicatedStorage.Events.CardVoteEvent:FireServer(bestCard)
+						local base = workspace.Elevators.Elevator.Base
+						if (clientRoot.Position - base.Position).Magnitude > 30 then
+							BackToElevator()
+						else
+							clientRoot.Position = Vector3.new(clientRoot.Position.X, base.Position.Y - 2.3, clientRoot.Position.Z)
+							bodyPosition.Position = Vector3.new(clientRoot.Position.X, base.Position.Y - 2.3, clientRoot.Position.Z)
 						end
-					until IncompleteGenerator()
-					debounce = false
+					until not alert
 				else
-					StateCollide(workspace.CurrentRoom, false)
-					StateCollide(workspace.Elevators, false)
-
-					if workspace.Info.ElevatorPrompt.ClaimIcon.Enabled then
+					if inElevator then
+						StateCollide(workspace.CurrentRoom, true)
+						StateCollide(workspace.Elevators, true)
 						repeat wait()
 							if not Settings.AutoFarm then break end
 
-							local base = workspace.Elevators.Elevator.Base
-							if (clientRoot.Position - base.Position).Magnitude > 30 then
-								BackToElevator()
-							else
-								OneTimeLerpTo(base)
+							clientRoot.CFrame = CFrame.new(clientRoot.Position.X, currentHeight, clientRoot.Position.Z)
+
+							local bestCard = GetBestCard()
+							if bestCard then
+								ReplicatedStorage.Events.CardVoteEvent:FireServer(bestCard)
 							end
-						until not workspace.Info.ElevatorPrompt.ClaimIcon.Enabled
+						until IncompleteGenerator()
+						debounce = false
+					else
+						StateCollide(workspace.CurrentRoom, false)
+						StateCollide(workspace.Elevators, false)
+
+						if workspace.Info.ElevatorPrompt.ClaimIcon.Enabled then
+							repeat wait()
+								if not Settings.AutoFarm then break end
+
+								local base = workspace.Elevators.Elevator.Base
+								if (clientRoot.Position - base.Position).Magnitude > 30 then
+									BackToElevator()
+								else
+									OneTimeLerpTo(base)
+								end
+							until not workspace.Info.ElevatorPrompt.ClaimIcon.Enabled
+						end
 					end
 				end
 			end
@@ -630,7 +648,7 @@ xpcall(function()
 		Library:Unload()
 	end)
 
-	local Version = "0.0.2"
+	local Version = "0.0.3"
 	local Author = "Kain"
 	local Window = Library:CreateWindow({
 		Title = "Dandys World",
