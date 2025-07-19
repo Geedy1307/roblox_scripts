@@ -318,7 +318,12 @@ xpcall(function()
 		local usefulItems = {'Bandage','HealthKit','ChocolateBox','Valve','JumperCable','EjectButton','Instructions','SmokeBomb'}
 		
 		for _, folder in next, model:GetChildren() do
-			if folder:IsA("Folder") and (folder.Name == "Monsters" or folder.Name == "Generators" or folder.Name == "Items") then
+			local allowedFolders = { 
+				Monsters = true,
+				Generators = true,
+				Items = true
+			}
+			if folder:IsA("Folder") and allowedFolders[folder.Name] then
 				for _, child in next, folder:GetChildren() do
 					if child:IsA("Model") then
 						local highlight = child:FindFirstChild("TargetESP")
@@ -360,7 +365,7 @@ xpcall(function()
 		for _, folder in next, model:GetChildren() do
 			if folder:IsA("Folder") and folder.Name == "FreeArea" then
 				for _, object in next, folder:GetChildren() do
-					if object.Name == "SproutTendril" then
+					if object.Name == "SproutTendril" and object:FindFirstChild("HumanoidRootPart") then
 						danger = object
 					end
 				end
@@ -443,34 +448,60 @@ xpcall(function()
 	local function IncompleteGenerator()
 		local currentRoom = workspace:FindFirstChild("CurrentRoom")
 		if not currentRoom then return false end
-		
+
 		local model = currentRoom:FindFirstChildOfClass("Model")
 		if not model then return false end
-		
-		local nearest = nil
-		local nearestDistance = math.huge
 
-		for _, folder in next, model:GetChildren() do
-			if folder:IsA("Folder") and folder.Name == "Generators" then
-				for _, gen in next, folder:GetChildren() do
-					if gen:FindFirstChild('TeleportPositions') and gen.TeleportPositions:FindFirstChild('TeleportPosition') and gen:FindFirstChild('Prompt') then
-						local stats = gen:FindFirstChild('Stats')
-						local notCompleted = stats and stats:FindFirstChild('Completed') and not stats.Completed.Value
-						local notBeingUsed = stats and stats:FindFirstChild('ActivePlayer') and not stats.ActivePlayer.Value
-						if notCompleted and notBeingUsed then
-							local distance = (clientRoot.Position - gen.TeleportPositions.TeleportPosition.Position).magnitude
-							if distance < nearestDistance then
-								nearest = gen
-								nearestDistance = distance
-							end
+		local sproutParts = {}
+		do
+			local freeArea = model:FindFirstChild("FreeArea")
+			if freeArea then
+				for _, obj in next, freeArea:GetChildren() do
+					if obj.Name == "SproutTendril" then
+						local hrp = obj:FindFirstChild("HumanoidRootPart")
+						if hrp then
+							sproutParts[#sproutParts + 1] = hrp
 						end
 					end
 				end
 			end
 		end
-			
-		return nearest
+
+		local nearestGen, shortestDistance = nil, math.huge
+		local generatorsFolder = model:FindFirstChild("Generators")
+		if not generatorsFolder then return false end
+
+		for _, gen in next, generatorsFolder:GetChildren() do
+			local prompt = gen:FindFirstChild("Prompt")
+			local tpFolder = gen:FindFirstChild("TeleportPositions")
+			local tpPos = tpFolder and tpFolder:FindFirstChild("TeleportPosition")
+			local stats = gen:FindFirstChild("Stats")
+			if prompt and tpPos and stats then
+				local completed = stats:FindFirstChild("Completed")
+				local activePlayer = stats:FindFirstChild("ActivePlayer")
+				if completed and activePlayer and not completed.Value and not activePlayer.Value then
+					local isNearDanger = false
+					for _, hrp in next, sproutParts do
+						if (prompt.Position - hrp.Position).Magnitude <= 30 then
+							isNearDanger = true
+							break
+						end
+					end
+
+					if not isNearDanger then
+						local dist = (clientRoot.Position - tpPos.Position).Magnitude
+						if dist < shortestDistance then
+							shortestDistance = dist
+							nearestGen = gen
+						end
+					end
+				end
+			end
+		end
+
+		return nearestGen
 	end
+
 
 	local function GetBestCard()
 		local bestCards = {'Machine','Heal','Heal2'}
@@ -484,15 +515,15 @@ xpcall(function()
 	end
 
 	local function StateCollide(parent, state)
-		local noCollide = {'DoorHitbox','DoorVisible','ElevatorHitBox'}
+		local ignoreNames = {
+			DoorHitbox = true,
+			DoorVisible = true,
+			ElevatorHitBox = true
+		}
 
-		for _, v in next, parent:GetDescendants() do
-			if v:IsA("BasePart") and not table.find(noCollide, v.Name) then
-				if state then
-					v.CanCollide = true
-				else
-					v.CanCollide = false
-				end
+		for _, part in next, parent:GetDescendants() do
+			if part:IsA("BasePart") and not ignoreNames[part.Name] then
+				part.CanCollide = state
 			end
 		end
 	end
@@ -507,102 +538,83 @@ xpcall(function()
 		local debounce = false
     	local currentHeight = clientRoot.Position.Y
 
-		while wait(0.1) do
-			if Settings.AutoFarm then
-				local generator = IncompleteGenerator()
-				local inElevator = clientStats:FindFirstChild("InElevator") and clientStats.InElevator.Value
-				
-				if generator then
-					if inElevator and not debounce then
-						StateCollide(workspace.CurrentRoom, true)
-						StateCollide(workspace.Elevators, true)
-						repeat wait()
-							clientRoot.CFrame = CFrame.new(clientRoot.Position.X, currentHeight, clientRoot.Position.Z)
-						until Menu.Message.Text:find('Elevator closes in') or not Menu.Message.Visible
+		while task.wait(0.1) do
+			if not Settings.AutoFarm then continue end
 
-						StateCollide(workspace.CurrentRoom, false)
-						StateCollide(workspace.Elevators, false)
+			local generator = IncompleteGenerator()
+			local inElevator = clientStats:FindFirstChild("InElevator") and clientStats.InElevator.Value
 
-						repeat wait()
-							if not Settings.AutoFarm then break end
-							
-							OneTimeLerpTo(workspace.Elevators.Elevator.ForceZone)
-						until (clientRoot.Position - workspace.Elevators.Elevator.ForceZone.Position).magnitude <= 3
-						generator = IncompleteGenerator()
-						debounce = true
-					else
-						StateCollide(workspace.CurrentRoom, false)
-						StateCollide(workspace.Elevators, false)
+			if generator then
+				if inElevator and not debounce then
+					StateCollide(workspace.CurrentRoom, true)
+					StateCollide(workspace.Elevators, true)
 
-						repeat wait()
-							if not Settings.AutoFarm then break end
-							if generator.Stats.ActivePlayer.Value ~= nil and tostring(generator.Stats.ActivePlayer.Value) ~= Client.Name then break end
+					repeat wait()
+						clientRoot.CFrame = CFrame.new(clientRoot.Position.X, currentHeight, clientRoot.Position.Z)
+					until not Menu.Message.Visible or Menu.Message.Text:find("Elevator closes in")
 
-							if SpecialAlerts() then
-								local danger = SpecialAlerts()
-								if danger then
-									repeat wait()
-										if not danger or not danger.PrimaryPart then break end
-					
-										local dangerRoot = danger.PrimaryPart
-										if dangerRoot then
-											generator.Stats.StopInteracting:FireServer("Stop")
+					StateCollide(workspace.CurrentRoom, false)
+					StateCollide(workspace.Elevators, false)
 
-											local zone = workspace.Elevators.Elevator.ForceZone
-											if (clientRoot.Position - zone.Position).magnitude > 30 then
-												BackToElevator()
-											else
-												clientRoot.CFrame = CFrame.new(clientRoot.Position.X, zone.Position.Y-5, clientRoot.Position.Z)
-											end
-										end
-									until not danger
-									generator = IncompleteGenerator()
-									break
-								end
-							end
+					repeat wait()
+						if not Settings.AutoFarm then break end
+						OneTimeLerpTo(workspace.Elevators.Elevator.ForceZone)
+					until (clientRoot.Position - workspace.Elevators.Elevator.ForceZone.Position).Magnitude <= 3
 
-							if MonstersClose(20) or MonstersAlert() or SpecialAlerts() then
-								generator.Stats.StopInteracting:FireServer("Stop")
-							else
-								if (clientRoot.Position - generator.PrimaryPart.Position).magnitude <= 2 then
-									interactPrompt(generator)
-								end
-							end
-							
-							OneTimeLerpTo(generator.PrimaryPart) --[[ TeleportPositions.TeleportPosition *]]
-						until generator.Stats.Completed.Value
-						clientRoot.CFrame = CFrame.new(clientRoot.Position.X, (generator.PrimaryPart.Position.Y - 2.5), clientRoot.Position.Z)
-					end
+					generator = IncompleteGenerator()
+					debounce = true
 				else
-					if inElevator then
-						StateCollide(workspace.CurrentRoom, true)
-						StateCollide(workspace.Elevators, true)
+					StateCollide(workspace.CurrentRoom, false)
+					StateCollide(workspace.Elevators, false)
+
+					repeat wait()
+						if not Settings.AutoFarm then break end
+						if generator.Stats.ActivePlayer.Value and tostring(generator.Stats.ActivePlayer.Value) ~= Client.Name then break end
+
+						if MonstersClose(20) or MonstersAlert() or SpecialAlerts() then
+							generator.Stats.StopInteracting:FireServer("Stop")
+							generator = IncompleteGenerator()
+						else
+							if (clientRoot.Position - generator.PrimaryPart.Position).Magnitude <= 2 then
+								interactPrompt(generator)
+							end
+						end
+
+						OneTimeLerpTo(generator.PrimaryPart)
+					until generator.Stats.Completed.Value
+					clientRoot.CFrame = CFrame.new(clientRoot.Position.X, generator.PrimaryPart.Position.Y - 2.5, clientRoot.Position.Z)
+				end
+
+			else
+				if inElevator then
+					StateCollide(workspace.CurrentRoom, true)
+					StateCollide(workspace.Elevators, true)
+					repeat wait()
+						if not Settings.AutoFarm then break end
+
+						clientRoot.CFrame = CFrame.new(clientRoot.Position.X, currentHeight, clientRoot.Position.Z)
+
+						local bestCard = GetBestCard()
+						if bestCard then
+							ReplicatedStorage.Events.CardVoteEvent:FireServer(bestCard)
+						end
+					until IncompleteGenerator()
+					debounce = false
+				else
+					StateCollide(workspace.CurrentRoom, false)
+					StateCollide(workspace.Elevators, false)
+
+					if workspace.Info.ElevatorPrompt.ClaimIcon.Enabled then
 						repeat wait()
 							if not Settings.AutoFarm then break end
 
-							clientRoot.CFrame = CFrame.new(clientRoot.Position.X, currentHeight, clientRoot.Position.Z)
-							local bestCard = GetBestCard()
-							if bestCard then
-								ReplicatedStorage.Events.CardVoteEvent:FireServer(bestCard)
+							local base = workspace.Elevators.Elevator.Base
+							if (clientRoot.Position - base.Position).Magnitude > 30 then
+								BackToElevator()
+							else
+								OneTimeLerpTo(base)
 							end
-						until IncompleteGenerator()
-						debounce = false
-					else
-						StateCollide(workspace.CurrentRoom, false)
-						StateCollide(workspace.Elevators, false)
-						
-						if workspace.Info.ElevatorPrompt.ClaimIcon.Enabled then
-							repeat wait()
-								if not Settings.AutoFarm then break end
-								
-								local base = workspace.Elevators.Elevator.Base
-								if (clientRoot.Position - base.Position).magnitude > 30 then
-									BackToElevator()
-								else
-									OneTimeLerpTo(base)
-								end
-							until not workspace.Info.ElevatorPrompt.ClaimIcon.Enabled
-						end
+						until not workspace.Info.ElevatorPrompt.ClaimIcon.Enabled
 					end
 				end
 			end
@@ -662,7 +674,7 @@ xpcall(function()
 		Compact = false,
 		Callback = function(value)
 			Settings.SpeedBoost = value
-			Save_Settings()
+			saveSettings()
 		end,
 	})
 
@@ -679,7 +691,7 @@ xpcall(function()
 		end,
 		ChangedCallback = function(key)
 			Settings.KeySpeedBoost = tostring(key)
-            Save_Settings()
+            saveSettings()
 		end,
 	})
 	
@@ -696,7 +708,7 @@ xpcall(function()
 		end,
 		ChangedCallback = function(key)
 			Settings.KeyMacroBassie = tostring(key)
-            Save_Settings()
+            saveSettings()
 		end,
 	})
 
