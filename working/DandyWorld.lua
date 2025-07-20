@@ -602,7 +602,7 @@ xpcall(function()
 
 						if monstersClose(15) or monstersAlert() then
 							generator.Stats.StopInteracting:FireServer("Stop")
-							wait(0.1)
+							wait()
 							generator = generators()
 						else
 							if (clientRoot.Position - generator.PrimaryPart.Position).magnitude <= 2 then
