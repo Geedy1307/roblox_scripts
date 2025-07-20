@@ -264,8 +264,7 @@ xpcall(function()
 
 	local function useItems()
 		for i=1,3 do
-			ReplicatedStorage.Events.ItemEvent:InvokeServer(Character, Character.Inventory["Slot"..i])
-			wait()
+			ReplicatedStorage.Events.ItemEvent:InvokeServer(Character, clientInventory["Slot"..i])
 		end
 	end
 
