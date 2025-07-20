@@ -644,7 +644,6 @@ xpcall(function()
 
 							if specialAlerts() then
 								generator = generators()
-								break
 							end
 						end
 
