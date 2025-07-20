@@ -262,21 +262,32 @@ xpcall(function()
 		Lighting.OutdoorAmbient = oldLighting.OutdoorAmbient
 	end
 
+	local function useItems()
+		for i=1,3 do
+			ReplicatedStorage.Events.ItemEvent:InvokeServer(Character, Character.Inventory["Slot"..i])
+			wait()
+		end
+	end
+
 	--[[ Bassie Macro ]]
-	local function collectClosestItems()
+	local function collectClosestItems(useItem)
+		useItem = useItem or false
+
 		local currentRoom = waitForChild(workspace, { Name = "CurrentRoom" })
 		local model = waitForChild(currentRoom, { ClassName = "Model" })
 
 		for _, folder in next, model:GetChildren() do
 			if folder:IsA("Folder") and folder.Name == "Items" then
 				for _, item in next, folder:GetChildren() do
-					if item:IsA("Model") and item.PrimaryPart then
-						if (clientRoot.Position - item.PrimaryPart.Position).magnitude <= 10 then
-							interactPrompt(item)
-						end
+					if item:IsA("Model") and item.PrimaryPart and (clientRoot.Position - item.PrimaryPart.Position).magnitude <= 10 then
+						interactPrompt(item)
 					end
 				end
 			end
+		end
+
+		if useItem then
+			useItems()
 		end
 	end
 
@@ -595,6 +606,7 @@ xpcall(function()
 							wait(0.1)
 							generator = generators()
 						else
+							collectClosestItems()
 							if (clientRoot.Position - generator.PrimaryPart.Position).magnitude <= 2 then
 								interactPrompt(generator)
 							end
