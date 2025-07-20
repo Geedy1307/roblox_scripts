@@ -606,7 +606,7 @@ xpcall(function()
 							wait(0.1)
 							generator = generators()
 						else
-							collectClosestItems()
+							collectClosestItems(true)
 							if (clientRoot.Position - generator.PrimaryPart.Position).magnitude <= 2 then
 								interactPrompt(generator)
 							end
