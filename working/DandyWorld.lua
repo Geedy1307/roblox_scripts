@@ -605,7 +605,6 @@ xpcall(function()
 							wait(0.1)
 							generator = generators()
 						else
-							collectClosestItems(true)
 							if (clientRoot.Position - generator.PrimaryPart.Position).magnitude <= 2 then
 								interactPrompt(generator)
 							end
@@ -670,10 +669,19 @@ xpcall(function()
 		end
 	end)
 
+	local loopAutoItems = coroutine.create(function()
+		while wait(0.1) do
+			if not Settings.AutoFarm then continue end
+			collectClosestItems(true)
+		end
+	end)
+
 	Cleaner(loopApplyESP)
 	coroutine.resume(loopApplyESP)
 	Cleaner(loopAutoFarm)
 	coroutine.resume(loopAutoFarm)
+	Cleaner(loopAutoItems)
+	coroutine.resume(loopAutoItems)
 
     --[[ UI *]]
 	local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/deividcomsono/Obsidian/refs/heads/main/Library.lua"))()
