@@ -598,19 +598,16 @@ xpcall(function()
 
 					repeat wait()
 						if not Settings.AutoFarm then break end
-						if generator.Stats.ActivePlayer.Value and tostring(generator.Stats.ActivePlayer.Value) ~= Client.Name then break end
-
-						if monstersClose(15) or monstersAlert() then
+						if monstersClose(20) or monstersAlert() then
 							generator.Stats.StopInteracting:FireServer("Stop")
-							wait()
 							generator = generators()
-						else
-							if (clientRoot.Position - generator.PrimaryPart.Position).magnitude <= 2 then
-								interactPrompt(generator)
-							end
+							break
 						end
 
 						lerpTo(generator.PrimaryPart)
+						if (clientRoot.Position - generator.PrimaryPart.Position).magnitude <= 2 then
+							interactPrompt(generator)
+						end
 					until generator.Stats.Completed.Value
 					clientRoot.CFrame = CFrame.new(clientRoot.Position.X, generator.PrimaryPart.Position.Y - 2.5, clientRoot.Position.Z)
 				end
