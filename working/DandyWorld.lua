@@ -590,8 +590,9 @@ xpcall(function()
 						if not Settings.AutoFarm then break end
 						if generator.Stats.ActivePlayer.Value and tostring(generator.Stats.ActivePlayer.Value) ~= Client.Name then break end
 
-						if monstersClose(20) or monstersAlert() then
+						if monstersClose(15) or monstersAlert() then
 							generator.Stats.StopInteracting:FireServer("Stop")
+							wait(0.1)
 							generator = generators()
 						else
 							if (clientRoot.Position - generator.PrimaryPart.Position).magnitude <= 2 then
