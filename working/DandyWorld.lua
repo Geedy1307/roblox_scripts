@@ -641,8 +641,11 @@ xpcall(function()
 						end
 						if monstersClose(20) or monstersAlert() then
 							generator.Stats.StopInteracting:FireServer("Stop")
-							generator = generators()
-							break
+
+							if specialAlerts() then
+								generator = generators()
+								break
+							end
 						end
 
 						lerpTo(generator.PrimaryPart)
