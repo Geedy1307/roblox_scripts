@@ -647,16 +647,15 @@ xpcall(function()
 						if not Settings.AutoFarm then
 							break
 						end
+
 						if monstersClose(20) or monstersAlert() then
 							generatorStats_StopInteracting:FireServer("Stop")
 
-							-- if specialAlerts() then
 							generator = generators()
 							generatorOrigin = waitForChild(generator, { Name = "Origin" })
 							generatorStats = waitForChild(generator, { Name = "Stats" })
 							generatorStats_Completed = waitForChild(generatorStats, { Name = "Completed" })
 							generatorStats_StopInteracting = waitForChild(generatorStats, { Name = "StopInteracting" })
-							-- end
 						end
 
 						if generatorOrigin then
@@ -668,7 +667,7 @@ xpcall(function()
 					until generatorStats_Completed.Value
 					if generatorOrigin then
 						clientRoot.CFrame =
-							CFrame.new(clientRoot.Position.X, generatorOrigin.Position.Y - 2.5, clientRoot.Position.Z)
+							CFrame.new(clientRoot.Position.X, generatorOrigin.Position.Y - 2.3, clientRoot.Position.Z)
 					end
 				end
 			else
@@ -741,6 +740,7 @@ xpcall(function()
 			if not Settings.AutoFarm then
 				continue
 			end
+
 			collectClosestItems(true)
 		end
 	end)
