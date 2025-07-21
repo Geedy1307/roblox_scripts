@@ -633,6 +633,10 @@ xpcall(function()
 					until (clientRoot.Position - elevators.Elevator.ForceZone.Position).magnitude <= 3
 
 					generator = generators()
+					generatorOrigin = waitForChild(generator, { Name = "Origin" })
+					generatorStats = waitForChild(generator, { Name = "Stats" })
+					generatorStats_Completed = waitForChild(generatorStats, { Name = "Completed" })
+					generatorStats_StopInteracting = waitForChild(generatorStats, { Name = "StopInteracting" })
 					debounce = true
 				else
 					stateCollide(currentRoom, false)
@@ -646,14 +650,13 @@ xpcall(function()
 						if monstersClose(20) or monstersAlert() then
 							generatorStats_StopInteracting:FireServer("Stop")
 
-							if specialAlerts() then
-								generator = generators()
-								generatorOrigin = waitForChild(generator, { Name = "Origin" })
-								generatorStats = waitForChild(generator, { Name = "Stats" })
-								generatorStats_Completed = waitForChild(generatorStats, { Name = "Completed" })
-								generatorStats_StopInteracting =
-									waitForChild(generatorStats, { Name = "StopInteracting" })
-							end
+							-- if specialAlerts() then
+							generator = generators()
+							generatorOrigin = waitForChild(generator, { Name = "Origin" })
+							generatorStats = waitForChild(generator, { Name = "Stats" })
+							generatorStats_Completed = waitForChild(generatorStats, { Name = "Completed" })
+							generatorStats_StopInteracting = waitForChild(generatorStats, { Name = "StopInteracting" })
+							-- end
 						end
 
 						if generatorOrigin then
