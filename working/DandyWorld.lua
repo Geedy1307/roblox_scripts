@@ -608,6 +608,11 @@ xpcall(function()
 			local elevators = waitForChild(workspace, { Name = "Elevators" })
 
 			if generator then
+				local generatorPrompt = waitForChild(generator, { Name = "Prompt" })
+				local generatorStats = waitForChild(generator, { Name = "Stats" })
+				local generatorStats_Completed = waitForChild(generatorStats, { Name = "Completed" })
+				local generatorStats_StopInteracting = waitForChild(generatorStats, { Name = "StopInteracting" })
+
 				if inElevator and not debounce then
 					stateCollide(currentRoom, true)
 					stateCollide(elevators, true)
@@ -640,20 +645,29 @@ xpcall(function()
 							break
 						end
 						if monstersClose(20) or monstersAlert() then
-							generator.Stats.StopInteracting:FireServer("Stop")
+							generatorStats_StopInteracting:FireServer("Stop")
 
 							if specialAlerts() then
 								generator = generators()
+								generatorPrompt = waitForChild(generator, { Name = "Prompt" })
+								generatorStats = waitForChild(generator, { Name = "Stats" })
+								generatorStats_Completed = waitForChild(generatorStats, { Name = "Completed" })
+								generatorStats_StopInteracting =
+									waitForChild(generatorStats, { Name = "StopInteracting" })
 							end
 						end
 
-						lerpTo(generator.PrimaryPart)
-						if (clientRoot.Position - generator.PrimaryPart.Position).magnitude <= 2 then
-							interactPrompt(generator)
+						if generatorPrompt then
+							lerpTo(generatorPrompt)
+							if (clientRoot.Position - generatorPrompt.Position).magnitude <= 2 then
+								interactPrompt(generator)
+							end
 						end
-					until generator.Stats.Completed.Value
-					clientRoot.CFrame =
-						CFrame.new(clientRoot.Position.X, generator.PrimaryPart.Position.Y - 2.5, clientRoot.Position.Z)
+					until generatorStats_Completed.Value
+					if generatorPrompt then
+						clientRoot.CFrame =
+							CFrame.new(clientRoot.Position.X, generatorPrompt.Position.Y - 2.5, clientRoot.Position.Z)
+					end
 				end
 			else
 				local alert = specialAlerts()
