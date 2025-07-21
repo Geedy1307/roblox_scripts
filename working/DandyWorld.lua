@@ -528,10 +528,9 @@ xpcall(function()
 
 		for _, gen in next, generatorsFolder:GetChildren() do
 			local prompt = gen:FindFirstChild("Prompt")
-			local tpFolder = gen:FindFirstChild("TeleportPositions")
-			local tpPos = tpFolder and tpFolder:FindFirstChild("TeleportPosition")
+			local origin = gen:FindFirstChild("Origin")
 			local stats = gen:FindFirstChild("Stats")
-			if prompt and tpPos and stats then
+			if prompt and origin and stats then
 				local completed = stats:FindFirstChild("Completed")
 				local activePlayer = stats:FindFirstChild("ActivePlayer")
 				if completed and activePlayer and not completed.Value and not activePlayer.Value then
@@ -544,7 +543,7 @@ xpcall(function()
 					end
 
 					if not isNearDanger then
-						local dist = (clientRoot.Position - tpPos.Position).magnitude
+						local dist = (clientRoot.Position - origin.Position).magnitude
 						if dist < shortestDistance then
 							shortestDistance = dist
 							nearestGen = gen
@@ -608,7 +607,7 @@ xpcall(function()
 			local elevators = waitForChild(workspace, { Name = "Elevators" })
 
 			if generator then
-				local generatorPrompt = waitForChild(generator, { Name = "Prompt" })
+				local generatorOrigin = waitForChild(generator, { Name = "Origin" })
 				local generatorStats = waitForChild(generator, { Name = "Stats" })
 				local generatorStats_Completed = waitForChild(generatorStats, { Name = "Completed" })
 				local generatorStats_StopInteracting = waitForChild(generatorStats, { Name = "StopInteracting" })
@@ -649,7 +648,7 @@ xpcall(function()
 
 							if specialAlerts() then
 								generator = generators()
-								generatorPrompt = waitForChild(generator, { Name = "Prompt" })
+								generatorOrigin = waitForChild(generator, { Name = "Origin" })
 								generatorStats = waitForChild(generator, { Name = "Stats" })
 								generatorStats_Completed = waitForChild(generatorStats, { Name = "Completed" })
 								generatorStats_StopInteracting =
@@ -657,16 +656,16 @@ xpcall(function()
 							end
 						end
 
-						if generatorPrompt then
-							lerpTo(generatorPrompt)
-							if (clientRoot.Position - generatorPrompt.Position).magnitude <= 2 then
+						if generatorOrigin then
+							lerpTo(generatorOrigin)
+							if (clientRoot.Position - generatorOrigin.Position).magnitude <= 2 then
 								interactPrompt(generator)
 							end
 						end
 					until generatorStats_Completed.Value
-					if generatorPrompt then
+					if generatorOrigin then
 						clientRoot.CFrame =
-							CFrame.new(clientRoot.Position.X, generatorPrompt.Position.Y - 2.5, clientRoot.Position.Z)
+							CFrame.new(clientRoot.Position.X, generatorOrigin.Position.Y - 2.5, clientRoot.Position.Z)
 					end
 				end
 			else
