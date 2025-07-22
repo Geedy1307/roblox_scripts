@@ -577,7 +577,7 @@ xpcall(function()
 		}
 
 		for _, part in next, parent:GetDescendants() do
-			if part:IsA("BasePart") and not ignoreNames[part.Name] then
+			if (part:IsA("BasePart") or part:IsA("Part") or part:IsA("MeshPart")) and not ignoreNames[part.Name] then
 				part.CanCollide = state
 			end
 		end
@@ -613,16 +613,10 @@ xpcall(function()
 				local generatorStats_StopInteracting = waitForChild(generatorStats, { Name = "StopInteracting" })
 
 				if inElevator and not debounce then
-					stateCollide(currentRoom, true)
-					stateCollide(elevators, true)
-
 					repeat
 						wait()
 						clientRoot.CFrame = CFrame.new(clientRoot.Position.X, currentHeight, clientRoot.Position.Z)
 					until not Menu.Message.Visible or Menu.Message.Text:find("Elevator closes in")
-
-					stateCollide(currentRoom, false)
-					stateCollide(elevators, false)
 
 					repeat
 						wait()
@@ -643,9 +637,6 @@ xpcall(function()
 					end
 					debounce = true
 				else
-					stateCollide(currentRoom, false)
-					stateCollide(elevators, false)
-
 					repeat
 						wait()
 						if not Settings.AutoFarm then
@@ -702,8 +693,6 @@ xpcall(function()
 					until not alert
 				else
 					if inElevator then
-						stateCollide(currentRoom, true)
-						stateCollide(elevators, true)
 						repeat
 							wait()
 							if not Settings.AutoFarm then
@@ -719,9 +708,6 @@ xpcall(function()
 						until generators()
 						debounce = false
 					else
-						stateCollide(currentRoom, false)
-						stateCollide(elevators, false)
-
 						local info = waitForChild(workspace, { Name = "Info" })
 						local elevatorPrompt = waitForChild(info, { Name = "ElevatorPrompt" })
 						local claimIcon = waitForChild(elevatorPrompt, { Name = "ClaimIcon" })
@@ -747,12 +733,14 @@ xpcall(function()
 	end)
 
 	local loopAutoItems = coroutine.create(function()
-		while wait(0.1) do
+		while wait(5) do
 			if not Settings.AutoFarm then
 				continue
 			end
 
 			collectClosestItems(true)
+			stateCollide(waitForChild(workspace, { Name = "CurrentRoom" }), false)
+			stateCollide(waitForChild(workspace, { Name = "Elevators" }), false)
 		end
 	end)
 
