@@ -636,8 +636,10 @@ xpcall(function()
 					if generator then
 						generatorOrigin = waitForChild(generator, { Name = "Origin" })
 						generatorStats = waitForChild(generator, { Name = "Stats" })
-						generatorStats_Completed = waitForChild(generatorStats, { Name = "Completed" })
-						generatorStats_StopInteracting = waitForChild(generatorStats, { Name = "StopInteracting" })
+						if generatorStats then
+							generatorStats_Completed = waitForChild(generatorStats, { Name = "Completed" })
+							generatorStats_StopInteracting = waitForChild(generatorStats, { Name = "StopInteracting" })
+						end
 					end
 					debounce = true
 				else
@@ -657,9 +659,13 @@ xpcall(function()
 							if generator then
 								generatorOrigin = waitForChild(generator, { Name = "Origin" })
 								generatorStats = waitForChild(generator, { Name = "Stats" })
-								generatorStats_Completed = waitForChild(generatorStats, { Name = "Completed" })
-								generatorStats_StopInteracting =
-									waitForChild(generatorStats, { Name = "StopInteracting" })
+								if generatorStats then
+									generatorStats_Completed = waitForChild(generatorStats, { Name = "Completed" })
+									generatorStats_StopInteracting =
+										waitForChild(generatorStats, { Name = "StopInteracting" })
+								end
+							else
+								break
 							end
 						end
 
