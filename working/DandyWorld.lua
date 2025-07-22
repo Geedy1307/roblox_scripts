@@ -533,7 +533,7 @@ xpcall(function()
 			if prompt and origin and stats then
 				local completed = stats:FindFirstChild("Completed")
 				local activePlayer = stats:FindFirstChild("ActivePlayer")
-				if completed and activePlayer and not completed.Value and not activePlayer.Value then
+				if completed and activePlayer and not completed.Value then
 					local isNearDanger = false
 					for _, hrp in next, sproutParts do
 						if (prompt.Position - hrp.Position).magnitude <= 30 then
@@ -633,10 +633,12 @@ xpcall(function()
 					until (clientRoot.Position - elevators.Elevator.ForceZone.Position).magnitude <= 3
 
 					generator = generators()
-					generatorOrigin = waitForChild(generator, { Name = "Origin" })
-					generatorStats = waitForChild(generator, { Name = "Stats" })
-					generatorStats_Completed = waitForChild(generatorStats, { Name = "Completed" })
-					generatorStats_StopInteracting = waitForChild(generatorStats, { Name = "StopInteracting" })
+					if generator then
+						generatorOrigin = waitForChild(generator, { Name = "Origin" })
+						generatorStats = waitForChild(generator, { Name = "Stats" })
+						generatorStats_Completed = waitForChild(generatorStats, { Name = "Completed" })
+						generatorStats_StopInteracting = waitForChild(generatorStats, { Name = "StopInteracting" })
+					end
 					debounce = true
 				else
 					stateCollide(currentRoom, false)
@@ -652,10 +654,13 @@ xpcall(function()
 							generatorStats_StopInteracting:FireServer("Stop")
 
 							generator = generators()
-							generatorOrigin = waitForChild(generator, { Name = "Origin" })
-							generatorStats = waitForChild(generator, { Name = "Stats" })
-							generatorStats_Completed = waitForChild(generatorStats, { Name = "Completed" })
-							generatorStats_StopInteracting = waitForChild(generatorStats, { Name = "StopInteracting" })
+							if generator then
+								generatorOrigin = waitForChild(generator, { Name = "Origin" })
+								generatorStats = waitForChild(generator, { Name = "Stats" })
+								generatorStats_Completed = waitForChild(generatorStats, { Name = "Completed" })
+								generatorStats_StopInteracting =
+									waitForChild(generatorStats, { Name = "StopInteracting" })
+							end
 						end
 
 						if generatorOrigin then
