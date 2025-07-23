@@ -733,7 +733,7 @@ xpcall(function()
 	end)
 
 	local loopAutoItems = coroutine.create(function()
-		while wait(5) do
+		while wait(1) do
 			if not Settings.AutoFarm then
 				continue
 			end
