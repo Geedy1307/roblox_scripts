@@ -605,7 +605,7 @@ xpcall(function()
 
 			local elevator = waitForChild(workspace, { Name = "Elevators" })
 			elevator = waitForChild(elevator, { Name = "Elevator" })
-			
+
 			if generator then
 				local generatorOrigin = waitForChild(generator, { Name = "Origin" })
 				local generatorStats = waitForChild(generator, { Name = "Stats" })
@@ -685,10 +685,7 @@ xpcall(function()
 						if (clientRoot.Position - base.Position).magnitude > 30 then
 							backToElevator()
 						else
-							clientRoot.Position =
-								Vector3.new(clientRoot.Position.X, base.Position.Y - 2.3, clientRoot.Position.Z)
-							bodyPosition.Position =
-								Vector3.new(clientRoot.Position.X, base.Position.Y - 2.3, clientRoot.Position.Z)
+							lerpTo(base)
 						end
 					until not alert
 				else
