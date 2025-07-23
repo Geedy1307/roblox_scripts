@@ -605,6 +605,8 @@ xpcall(function()
 
 			local elevator = waitForChild(workspace, { Name = "Elevators" })
 			elevator = waitForChild(elevator, { Name = "Elevator" })
+			local forceZone = waitForChild(elevator, { Name = "ForceZone" })
+			local base = waitForChild(elevator, { Name = "Base" })
 
 			if generator then
 				local generatorOrigin = waitForChild(generator, { Name = "Origin" })
@@ -623,8 +625,8 @@ xpcall(function()
 						if not Settings.AutoFarm then
 							break
 						end
-						lerpTo(elevator.ForceZone)
-					until (clientRoot.Position - elevator.ForceZone.Position).magnitude <= 3
+						lerpTo(forceZone)
+					until (clientRoot.Position - forceZone.Position).magnitude <= 3
 
 					generator = generators()
 					if generator then
@@ -681,11 +683,10 @@ xpcall(function()
 							break
 						end
 
-						local base = elevator.Base
-						if (clientRoot.Position - base.Position).magnitude > 30 then
+						if (clientRoot.Position - forceZone.Position).magnitude > 30 then
 							backToElevator()
 						else
-							lerpTo(base)
+							lerpTo(forceZone)
 						end
 					until not alert
 				else
@@ -715,7 +716,6 @@ xpcall(function()
 									break
 								end
 
-								local base = elevator.Base
 								if (clientRoot.Position - base.Position).magnitude > 30 then
 									backToElevator()
 								else
