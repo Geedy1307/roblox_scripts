@@ -574,8 +574,6 @@ xpcall(function()
 			DoorHitbox = true,
 			DoorVisible = true,
 			ElevatorHitBox = true,
-			ForceZone = true,
-			Base = true,
 		}
 
 		for _, part in next, parent:GetDescendants() do
