@@ -675,18 +675,17 @@ xpcall(function()
 					end
 				end
 			else
-				local alert = specialAlerts()
-				if alert then
+				if specialAlerts() then
 					repeat
 						wait()
 						if not Settings.AutoFarm then
 							break
 						end
 
-						if (clientRoot.Position - forceZone.Position).magnitude > 30 then
+						if (clientRoot.Position - base.Position).magnitude > 30 then
 							backToElevator()
 						else
-							lerpTo(forceZone)
+							lerpTo(base)
 						end
 					until not specialAlerts()
 				else
@@ -756,7 +755,7 @@ xpcall(function()
 		Library:Unload()
 	end)
 
-	local Version = "0.0.2.1"
+	local Version = "0.0.2.2"
 	local Author = "Kain"
 	local Window = Library:CreateWindow({
 		Title = "Dandys World",
