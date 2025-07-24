@@ -579,7 +579,7 @@ xpcall(function()
 		}
 
 		for _, part in next, parent:GetDescendants() do
-			if part.CanCollide and not ignoreNames[part.Name] then
+			if part:IsA("BasePart") and not ignoreNames[part.Name] then
 				part.CanCollide = state
 			end
 		end
