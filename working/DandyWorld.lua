@@ -688,7 +688,7 @@ xpcall(function()
 						else
 							lerpTo(forceZone)
 						end
-					until not alert
+					until not specialAlerts()
 				else
 					if inElevator then
 						repeat
