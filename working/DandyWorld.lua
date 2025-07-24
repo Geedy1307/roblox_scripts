@@ -574,10 +574,12 @@ xpcall(function()
 			DoorHitbox = true,
 			DoorVisible = true,
 			ElevatorHitBox = true,
+			ForceZone = true,
+			Base = true,
 		}
 
 		for _, part in next, parent:GetDescendants() do
-			if (part:IsA("BasePart") or part:IsA("Part") or part:IsA("MeshPart")) and not ignoreNames[part.Name] then
+			if part.CanCollide and not ignoreNames[part.Name] then
 				part.CanCollide = state
 			end
 		end
@@ -691,17 +693,13 @@ xpcall(function()
 				else
 					if inElevator then
 						repeat
-							wait()
+							wait(1)
 							if not Settings.AutoFarm then
 								break
 							end
 
 							clientRoot.CFrame = CFrame.new(clientRoot.Position.X, currentHeight, clientRoot.Position.Z)
-
-							local card = bestCard()
-							if card then
-								ReplicatedStorage.Events.CardVoteEvent:FireServer(card)
-							end
+							ReplicatedStorage.Events.CardVoteEvent:FireServer(bestCard())
 						until generators()
 						debounce = false
 					else
@@ -755,7 +753,7 @@ xpcall(function()
 		Library:Unload()
 	end)
 
-	local Version = "0.0.2.2"
+	local Version = "0.0.2.3"
 	local Author = "Kain"
 	local Window = Library:CreateWindow({
 		Title = "Dandys World",
