@@ -582,6 +582,10 @@ xpcall(function()
 			if part:IsA("BasePart") and (part.CanCollide ~= state) and not Character:IsAncestorOf(part) and not ignoreNames[part.Name] then
 				part.CanCollide = state
 			end
+
+			if part.Name:find('NoClip') then
+				part:Remove()
+			end
 		end
 	end
 
