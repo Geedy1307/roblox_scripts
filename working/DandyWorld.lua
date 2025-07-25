@@ -579,27 +579,8 @@ xpcall(function()
 		}
 
 		for _, part in parent:GetDescendants() do
-			if not ignoreNames[part.Name] then
-				pcall(function()
-					if state == false and part.CanCollide == true then
-						part.CanCollide = state
-					elseif state == true then
-						part.CanCollide = state
-					end
-				end)
-			end
-		end
-	end
-
-	local function noclipCharacter()
-		local charCFrame, charSize = Character:GetBoundingBox()
-		local region = Region3.new(charCFrame.Position - (charSize / 2), charCFrame.Position + (charSize / 2))
-
-		local touchingParts = workspace:FindPartsInRegion3(region, Character, math.huge)
-
-		for _, part in next, touchingParts do
-			if part:IsA("BasePart") and part.CanCollide and not Character:IsAncestorOf(part) then
-				part.CanCollide = false
+			if part:IsA("BasePart") and (part.CanCollide ~= state) and not Character:IsAncestorOf(part) and not ignoreNames[part.Name] then
+				part.CanCollide = state
 			end
 		end
 	end
@@ -752,9 +733,8 @@ xpcall(function()
 			end
 
 			collectClosestItems(true)
-			noclipCharacter()
-			-- stateCollide(waitForChild(workspace, { Name = "CurrentRoom" }), false)
-			-- stateCollide(waitForChild(workspace, { Name = "Elevators" }), false)
+			stateCollide(waitForChild(workspace, { Name = "CurrentRoom" }), false)
+			stateCollide(waitForChild(workspace, { Name = "Elevators" }), false)
 		end
 	end)
 
@@ -773,7 +753,7 @@ xpcall(function()
 		Library:Unload()
 	end)
 
-	local Version = "0.0.2.8"
+	local Version = "0.0.2.1"
 	local Author = "Kain"
 	local Window = Library:CreateWindow({
 		Title = "Dandys World",
