@@ -578,13 +578,9 @@ xpcall(function()
 
 		for _, part in parent:GetDescendants() do
 			if not ignoreNames[part.Name] then
-				local success = pcall(function()
+				pcall(function()
 					part.CanCollide = state
 				end)
-
-				if not success then
-					warn("Unable to set CanCollide:", part:GetFullName())
-				end
 			end
 		end
 	end
@@ -757,7 +753,7 @@ xpcall(function()
 		Library:Unload()
 	end)
 
-	local Version = "0.0.2.5"
+	local Version = "0.0.2.6"
 	local Author = "Kain"
 	local Window = Library:CreateWindow({
 		Title = "Dandys World",
