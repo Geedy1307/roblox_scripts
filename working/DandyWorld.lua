@@ -306,7 +306,9 @@ xpcall(function()
 		end
 
 		if useItem then
+			ReplicatedStorage.Events.SprintEvent:FireServer(true)
 			useItems()
+			ReplicatedStorage.Events.SprintEvent:FireServer(false)
 		end
 	end
 
@@ -744,7 +746,7 @@ xpcall(function()
 	end)
 
 	local loopAutoItems = coroutine.create(function()
-		while wait(1) do
+		while wait() do
 			if not Settings.AutoFarm then
 				continue
 			end
