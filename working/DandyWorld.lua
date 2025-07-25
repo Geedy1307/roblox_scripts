@@ -579,7 +579,11 @@ xpcall(function()
 		for _, part in parent:GetDescendants() do
 			if not ignoreNames[part.Name] then
 				pcall(function()
-					part.CanCollide = state
+					if state == false and part.CanCollide == true then
+						part.CanCollide = state
+					elseif state == true then
+						part.CanCollide = state
+					end
 				end)
 			end
 		end
