@@ -589,6 +589,19 @@ xpcall(function()
 		end
 	end
 
+	local function noclipCharacter()
+		local charCFrame, charSize = Character:GetBoundingBox()
+		local region = Region3.new(charCFrame.Position - (charSize / 2), charCFrame.Position + (charSize / 2))
+
+		local touchingParts = workspace:FindPartsInRegion3(region, Character, math.huge)
+
+		for _, part in next, touchingParts do
+			if part:IsA("BasePart") and part.CanCollide and not Character:IsAncestorOf(part) then
+				part.CanCollide = false
+			end
+		end
+	end
+
 	local loopApplyESP = coroutine.create(function()
 		while wait(1) do
 			applyESP()
@@ -737,8 +750,9 @@ xpcall(function()
 			end
 
 			collectClosestItems(true)
-			stateCollide(waitForChild(workspace, { Name = "CurrentRoom" }), false)
-			stateCollide(waitForChild(workspace, { Name = "Elevators" }), false)
+			noclipCharacter()
+			-- stateCollide(waitForChild(workspace, { Name = "CurrentRoom" }), false)
+			-- stateCollide(waitForChild(workspace, { Name = "Elevators" }), false)
 		end
 	end)
 
@@ -757,7 +771,7 @@ xpcall(function()
 		Library:Unload()
 	end)
 
-	local Version = "0.0.2.6"
+	local Version = "0.0.2.7"
 	local Author = "Kain"
 	local Window = Library:CreateWindow({
 		Title = "Dandys World",
