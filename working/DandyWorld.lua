@@ -604,7 +604,7 @@ xpcall(function()
 		local debounce = false
 		local currentHeight = clientRoot.Position.Y
 
-		while wait(0.1) do
+		while wait() do
 			if not Settings.AutoFarm then
 				continue
 			end
@@ -763,7 +763,7 @@ xpcall(function()
 		Library:Unload()
 	end)
 
-	local Version = "0.0.2.2"
+	local Version = "0.0.2.3"
 	local Author = "Kain"
 	local Window = Library:CreateWindow({
 		Title = "Dandys World",
