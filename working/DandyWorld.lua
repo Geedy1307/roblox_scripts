@@ -594,6 +594,37 @@ xpcall(function()
 		end
 	end
 
+	local function hideParts()
+		local currentRoom = waitForChild(workspace, { Name = "CurrentRoom" })
+		local elevators = waitForChild(workspace, { Name = "Elevators" })
+		local model = waitForChild(currentRoom, { ClassName = "Model" })
+		local monsters = waitForChild(model, { ClassName = "Monsters" })
+		local generators = waitForChild(model, { ClassName = "Generators" })
+		
+		local allowedObjects = {
+			monsters,
+			generators,
+			elevators,
+			Character,
+		}
+
+		for _, obj in next, workspace:GetDescendants() do
+			if obj:IsA("BasePart") or obj:IsA("MeshPart") or obj:IsA("Part") then
+				local parentAllowed = false
+				for _, allowed in allowedObjects do
+					if allowed and obj:IsDescendantOf(allowed) then
+						parentAllowed = true
+						break
+					end
+				end
+
+				if parentAllowed == false and obj.Transparency == 0 then
+					obj.Transparency = 1
+				end
+			end
+		end
+	end
+
 	local loopApplyESP = coroutine.create(function()
 		while wait(1) do
 			applyESP()
@@ -742,6 +773,7 @@ xpcall(function()
 				continue
 			end
 
+			hideParts()
 			collectClosestItems(true)
 			stateCollide(waitForChild(workspace, { Name = "CurrentRoom" }), false)
 			stateCollide(waitForChild(workspace, { Name = "Elevators" }), false)
