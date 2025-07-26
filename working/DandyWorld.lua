@@ -308,7 +308,7 @@ xpcall(function()
 		if useItem then
 			ReplicatedStorage.Events.SprintEvent:FireServer(true)
 			useItems()
-			ReplicatedStorage.Events.SprintEvent:FireServer(false)
+			-- ReplicatedStorage.Events.SprintEvent:FireServer(false)
 		end
 	end
 
@@ -495,14 +495,14 @@ xpcall(function()
 			clientRoot.CFrame = clientRoot.CFrame:lerp(CFrame.new(target.Position), adjustedLerpAlpha)
 			bodyPosition.Position = Vector3.new(clientRoot.Position.X, target.Position.Y, clientRoot.Position.Z)
 		else
-			if (monstersAlert() and monstersClose(20)) or (monstersAlert() and distance <= 20) then
-				clientRoot.CFrame = CFrame.new(clientRoot.Position.X, (target.Position.Y - 2.3), clientRoot.Position.Z)
+			if monstersClose(20) or (monstersAlert() and distance <= 20) then
+				clientRoot.CFrame = CFrame.new(clientRoot.Position.X, (target.Position.Y - 2.5), clientRoot.Position.Z)
 			end
 			clientRoot.CFrame = clientRoot.CFrame:lerp(
-				CFrame.new(target.Position.X, (target.Position.Y - 2.3), target.Position.Z),
+				CFrame.new(target.Position.X, (target.Position.Y - 2.5), target.Position.Z),
 				adjustedLerpAlpha
 			)
-			bodyPosition.Position = Vector3.new(clientRoot.Position.X, target.Position.Y - 2.3, clientRoot.Position.Z)
+			bodyPosition.Position = Vector3.new(clientRoot.Position.X, target.Position.Y - 2.5, clientRoot.Position.Z)
 		end
 	end
 
@@ -579,11 +579,16 @@ xpcall(function()
 		}
 
 		for _, part in parent:GetDescendants() do
-			if part:IsA("BasePart") and (part.CanCollide ~= state) and not Character:IsAncestorOf(part) and not ignoreNames[part.Name] then
+			if
+				part:IsA("BasePart")
+				and (part.CanCollide ~= state)
+				and not Character:IsAncestorOf(part)
+				and not ignoreNames[part.Name]
+			then
 				part.CanCollide = state
 			end
 
-			if part.Name:find('NoClip') then
+			if part.Name:find("NoClip") then
 				part:Remove()
 			end
 		end
@@ -654,8 +659,11 @@ xpcall(function()
 						if monstersClose(20) or monstersAlert() then
 							generatorStats_StopInteracting:FireServer("Stop")
 
-							generator = generators()
-							if generator then
+							if specialAlerts() then
+								generator = generators()
+								if not generator then
+									break
+								end
 								generatorOrigin = waitForChild(generator, { Name = "Origin" })
 								generatorStats = waitForChild(generator, { Name = "Stats" })
 								if generatorStats then
@@ -663,49 +671,47 @@ xpcall(function()
 									generatorStats_StopInteracting =
 										waitForChild(generatorStats, { Name = "StopInteracting" })
 								end
-							else
-								break
 							end
 						end
 
 						if generatorOrigin then
 							lerpTo(generatorOrigin)
-							if (clientRoot.Position - generatorOrigin.Position).magnitude <= 2 then
+							if (clientRoot.Position - generatorOrigin.Position).magnitude <= 1 then
 								interactPrompt(generator)
 							end
 						end
 					until generatorStats_Completed.Value
 					if generatorOrigin then
 						clientRoot.CFrame =
-							CFrame.new(clientRoot.Position.X, generatorOrigin.Position.Y - 2.3, clientRoot.Position.Z)
+							CFrame.new(clientRoot.Position.X, generatorOrigin.Position.Y - 2.5, clientRoot.Position.Z)
 					end
 				end
 			else
-				if specialAlerts() then
+				if inElevator then
 					repeat
-						wait()
+						wait(1)
 						if not Settings.AutoFarm then
 							break
 						end
 
-						if (clientRoot.Position - base.Position).magnitude > 30 then
-							backToElevator()
-						else
-							lerpTo(base)
-						end
-					until not specialAlerts()
+						clientRoot.CFrame = CFrame.new(clientRoot.Position.X, currentHeight, clientRoot.Position.Z)
+						ReplicatedStorage.Events.CardVoteEvent:FireServer(bestCard())
+					until generators()
+					debounce = false
 				else
-					if inElevator then
+					if specialAlerts() then
 						repeat
-							wait(1)
+							wait()
 							if not Settings.AutoFarm then
 								break
 							end
 
-							clientRoot.CFrame = CFrame.new(clientRoot.Position.X, currentHeight, clientRoot.Position.Z)
-							ReplicatedStorage.Events.CardVoteEvent:FireServer(bestCard())
-						until generators()
-						debounce = false
+							if (clientRoot.Position - base.Position).magnitude > 30 then
+								backToElevator()
+							else
+								lerpTo(base)
+							end
+						until not specialAlerts()
 					else
 						local info = waitForChild(workspace, { Name = "Info" })
 						local elevatorPrompt = waitForChild(info, { Name = "ElevatorPrompt" })
