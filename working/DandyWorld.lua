@@ -3,21 +3,6 @@ local wait = task.wait
 repeat
 	wait()
 until game:IsLoaded()
-repeat
-	wait()
-until game:GetService("Players").LocalPlayer
-repeat
-	wait()
-until game:GetService("Players").LocalPlayer.PlayerGui:FindFirstChild("ScreenGui")
-repeat
-	wait()
-until game:GetService("Players").LocalPlayer.PlayerGui.ScreenGui:FindFirstChild("Menu")
-repeat
-	wait()
-until game:GetService("Players").LocalPlayer.PlayerGui.ScreenGui.Menu:FindFirstChild("SkillCheckFrame")
-repeat
-	wait()
-until game:GetService("Players").LocalPlayer.Character
 
 local defaultSettings = {
 	FullBright = false,
@@ -178,41 +163,63 @@ setmetatable(Cleaner, {
 --#endregionF
 
 xpcall(function()
+	local function waitForChild(parent, target)
+		local child = parent:FindFirstChild(target)
+		if child then
+			return child
+		end
+
+		for _, v in next, parent:GetChildren() do
+			if v.ClassName == target then
+				return v
+			end
+		end
+
+		while wait() do
+			local newChild = parent.ChildAdded:Wait()
+			if newChild.Name == target or newChild.ClassName == target then
+				return newChild
+			end
+		end
+
+		return nil
+	end
+
 	local Lighting = game:GetService("Lighting")
 	local VirtualInputManager = game:GetService("VirtualInputManager")
 	local ReplicatedStorage = game:GetService("ReplicatedStorage")
 	local Players = game:GetService("Players")
 	local Client = Players.LocalPlayer
+	local playerGui = Client.PlayerGui
 
-	local ScreenGui = Client.PlayerGui:WaitForChild("ScreenGui")
-	local Menu = ScreenGui:WaitForChild("Menu")
-	local gameMessage = Menu:WaitForChild("Message")
-
-	local skillCheckFrame = Menu:WaitForChild("SkillCheckFrame")
-	local marker = skillCheckFrame:WaitForChild("Marker")
-	local goldArea = skillCheckFrame:WaitForChild("GoldArea")
+	local screenGui = waitForChild(playerGui, "ScreenGui")
+	local menuGui = waitForChild(screenGui, "Menu")
+	local gameMessage = waitForChild(menuGui, "Message")
+	local skillCheckFrame = waitForChild(menuGui, "SkillCheckFrame")
+	local marker = waitForChild(skillCheckFrame, "Marker")
+	local goldArea = waitForChild(skillCheckFrame, "GoldArea")
 
 	local Character = Client.Character or Client.CharacterAdded:Wait()
-	local clientRoot = Character:WaitForChild("HumanoidRootPart")
-	local clientHumanoid = Character:WaitForChild("Humanoid")
-	local clientInventory = Character:WaitForChild("Inventory")
+	local clientRoot = waitForChild(Character, "HumanoidRootPart")
+	local clientHumanoid = waitForChild(Character, "Humanoid")
+	local clientInventory = waitForChild(Character, "Inventory")
 
-	local clientStats = Character:WaitForChild("Stats")
-	local inElevator = clientStats:WaitForChild("InElevator") and clientStats.InElevator.Value
+	local clientStats = waitForChild(Character, "Stats")
+	local inElevator = waitForChild(clientStats, "InElevator") and clientStats.InElevator.Value
 
-	local currentRoom = workspace:WaitForChild("CurrentRoom")
+	local currentRoom = waitForChild(workspace, "CurrentRoom")
 
-	local elevators = workspace:WaitForChild("Elevators")
-	local elevator = elevators:WaitForChild("Elevator")
-	local forceZone = elevator:WaitForChild("ForceZone")
-	local base = elevator:WaitForChild("Base")
+	local elevators = waitForChild(workspace, "Elevators")
+	local elevator = waitForChild(elevators, "Elevator")
+	local forceZone = waitForChild(elevator, "ForceZone")
+	local base = waitForChild(elevator, "Base")
 
-	local roundInfo = workspace:WaitForChild("Info")
-	local elevatorPrompt = roundInfo:WaitForChild("ElevatorPrompt")
-	local claimIcon = elevatorPrompt:WaitForChild("ClaimIcon")
-	local cardVote = roundInfo:WaitForChild("CardVote")
+	local roundInfo = waitForChild(workspace, "Info")
+	local elevatorPrompt = waitForChild(roundInfo, "ElevatorPrompt")
+	local claimIcon = waitForChild(elevatorPrompt, "ClaimIcon")
+	local cardVote = waitForChild(roundInfo, "CardVote")
 
-	local baseTrigger = workspace:WaitForChild("BaseplateTrigger")
+	local baseTrigger = waitForChild(workspace, "BaseplateTrigger")
 
 	Client.CameraMaxZoomDistance = 200
 
