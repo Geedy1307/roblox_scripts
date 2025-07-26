@@ -175,7 +175,7 @@ xpcall(function()
 			end
 		end
 
-		while wait() do
+		while true do
 			local newChild = parent.ChildAdded:Wait()
 			if newChild.Name == target or newChild.ClassName == target then
 				return newChild
