@@ -1,53 +1,14 @@
 local wait = task.wait
 
-local function waitForChild(parent, options)
-	assert(parent and parent:IsA("Instance"), "Parent must be a valid Instance")
-
-	local name = options.Name
-	local className = options.ClassName
-	local found = nil
-
-	if name and className then
-		local candidate = parent:FindFirstChild(name)
-		if candidate and candidate:IsA(className) then
-			return candidate
-		end
-	elseif name then
-		found = parent:FindFirstChild(name)
-		if found then
-			return found
-		end
-	elseif className then
-		found = parent:FindFirstChildWhichIsA(className)
-		if found then
-			return found
-		end
-	end
-
-	while wait() do
-		if name and className then
-			local candidate = parent:FindFirstChild(name)
-			if candidate and candidate:IsA(className) then
-				found = candidate
-			end
-		elseif name then
-			found = parent:FindFirstChild(name)
-		elseif className then
-			found = parent:FindFirstChildWhichIsA(className)
-		end
-
-		if found then
-			break
-		end
-	end
-
-	return found
-end
-
 repeat
 	wait()
 until game:IsLoaded()
-waitForChild(waitForChild(workspace, { Name = "CurrentRoom" }), { ClassName = "Model" })
+repeat
+	wait()
+until workspace:FindFirstChild("CurrentRoom")
+repeat
+	wait()
+until workspace:FindFirstChild("CurrentRoom"):FindFirstAncestorWhichIsA("Model")
 
 local defaultSettings = {
 	FullBright = false,
@@ -213,20 +174,36 @@ xpcall(function()
 	local ReplicatedStorage = game:GetService("ReplicatedStorage")
 	local Players = game:GetService("Players")
 	local Client = Players.LocalPlayer
-	local ScreenGui = waitForChild(Client.PlayerGui, { Name = "ScreenGui", ClassName = "ScreenGui" })
-	local Menu = waitForChild(ScreenGui, { Name = "Menu", ClassName = "Frame" })
-	local SkillCheckFrame = waitForChild(Menu, { Name = "SkillCheckFrame", ClassName = "Frame" })
-	local Marker = waitForChild(SkillCheckFrame, { Name = "Marker", ClassName = "GuiObject" })
-	local GoldArea = waitForChild(SkillCheckFrame, { Name = "GoldArea", ClassName = "Frame" })
+
+	local ScreenGui = Client.PlayerGui:WaitForChild("ScreenGui")
+	local Menu = ScreenGui:WaitForChild("Menu")
+	local gameMessage = Menu:WaitForChild("Message")
+
+	local skillCheckFrame = Menu:WaitForChild("SkillCheckFrame")
+	local marker = Menu:WaitForChild("Marker")
+	local goldArea = Menu:WaitForChild("GoldArea")
 
 	local Character = Client.Character or Client.CharacterAdded:Wait()
+	local clientRoot = Character:WaitForChild("HumanoidRootPart")
+	local clientHumanoid = Character:WaitForChild("Humanoid")
+	local clientInventory = Character:WaitForChild("Inventory")
+
 	local clientStats = Character:WaitForChild("Stats")
-	Client.CharacterAdded:Connect(function(newChar)
-		Character = newChar
-	end)
-	local clientRoot = waitForChild(Character, { Name = "HumanoidRootPart" })
-	local clientHumanoid = waitForChild(Character, { Name = "Humanoid" })
-	local clientInventory = waitForChild(Character, { Name = "Inventory" })
+	local inElevator = clientStats:WaitForChild("InElevator") and clientStats.InElevator.Value
+
+	local currentRoom = workspace:WaitForChild("CurrentRoom")
+
+	local elevators = workspace:WaitForChild("Elevators")
+	local elevator = elevators:WaitForChild("Elevator")
+	local forceZone = elevator:WaitForChild("ForceZone")
+	local base = elevator:WaitForChild("Base")
+
+	local roundInfo = workspace:WaitForChild("Info")
+	local elevatorPrompt = roundInfo:WaitForChild("ElevatorPrompt")
+	local claimIcon = elevatorPrompt:WaitForChild("ClaimIcon")
+	local cardVote = roundInfo:WaitForChild("CardVote")
+
+	local baseTrigger = workspace:WaitForChild("BaseplateTrigger")
 
 	Client.CameraMaxZoomDistance = 200
 
@@ -288,17 +265,14 @@ xpcall(function()
 	local function collectClosestItems(useItem)
 		useItem = useItem or false
 
-		local currentRoom = waitForChild(workspace, { Name = "CurrentRoom" })
-		local model = waitForChild(currentRoom, { ClassName = "Model" })
+		if not currentRoom:FindFirstChildWhichIsA("Model") then
+			return
+		end
 
-		for _, folder in next, model:GetChildren() do
+		for _, folder in next, currentRoom:FindFirstChildWhichIsA("Model"):GetChildren() do
 			if folder:IsA("Folder") and folder.Name == "Items" then
 				for _, item in next, folder:GetChildren() do
-					if
-						item:IsA("Model")
-						and item.PrimaryPart
-						and (clientRoot.Position - item.PrimaryPart.Position).magnitude <= 10
-					then
+					if item.PrimaryPart and (clientRoot.Position - item.PrimaryPart.Position).magnitude <= 10 then
 						interactPrompt(item)
 					end
 				end
@@ -320,18 +294,14 @@ xpcall(function()
 		collectClosestItems()
 	end
 
-	local TOLERANCE = 10
-
 	local function isWithinGoldArea(mark, area)
 		local pos, size = area.AbsolutePosition, area.AbsoluteSize
 		local markerX = mark.AbsolutePosition.X
-		return markerX >= pos.X and markerX <= pos.X + size.X + TOLERANCE
+		return markerX >= pos.X and markerX <= pos.X + size.X + 5
 	end
 
 	local function tryAutoSkillCheck()
-		if SkillCheckFrame.Visible and Settings.AutoSkillCheck then
-			local marker = waitForChild(SkillCheckFrame, { Name = "Marker", ClassName = "GuiObject" })
-			local goldArea = waitForChild(SkillCheckFrame, { Name = "GoldArea", ClassName = "Frame" })
+		if skillCheckFrame.Visible and Settings.AutoSkillCheck then
 			if marker and goldArea and isWithinGoldArea(marker, goldArea) then
 				VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
 			end
@@ -348,9 +318,9 @@ xpcall(function()
 		instance.Changed:Connect(onRelevantChange)
 	end
 
-	bindChanges(SkillCheckFrame)
-	bindChanges(Marker)
-	bindChanges(GoldArea)
+	bindChanges(skillCheckFrame)
+	bindChanges(marker)
+	bindChanges(goldArea)
 
 	--[[ ESP ]]
 	local function addESP(target, fillcolor)
@@ -368,9 +338,6 @@ xpcall(function()
 	end
 
 	local function applyESP()
-		local currentRoom = waitForChild(workspace, { Name = "CurrentRoom" })
-		local model = waitForChild(currentRoom, { ClassName = "Model" })
-
 		local usefulItems = {
 			"Bandage",
 			"HealthKit",
@@ -382,13 +349,18 @@ xpcall(function()
 			"SmokeBomb",
 		}
 
-		for _, folder in next, model:GetChildren() do
-			local allowedFolders = {
-				Monsters = true,
-				Generators = true,
-				Items = true,
-			}
-			if folder:IsA("Folder") and allowedFolders[folder.Name] then
+		local allowedFolders = {
+			"Monsters",
+			"Generators",
+			"Items",
+		}
+
+		if not currentRoom:FindFirstChildWhichIsA("Model") then
+			return
+		end
+
+		for _, folder in next, currentRoom:FindFirstChildWhichIsA("Model"):GetChildren() do
+			if folder:IsA("Folder") and table.find(allowedFolders, folder.Name) then
 				for _, child in next, folder:GetChildren() do
 					if child:IsA("Model") then
 						local highlight = child:FindFirstChild("TargetESP")
@@ -411,19 +383,19 @@ xpcall(function()
 
 	--[[ AutoFarm ]]
 	local function backToElevator()
-		if workspace:FindFirstChild("BaseplateTrigger") then
-			firetouchinterest(clientRoot, workspace.BaseplateTrigger, 0)
-			wait(0.1)
-			firetouchinterest(clientRoot, workspace.BaseplateTrigger, 1)
-		end
+		firetouchinterest(clientRoot, baseTrigger, 0)
+		wait(0.1)
+		firetouchinterest(clientRoot, baseTrigger, 1)
 	end
 
 	local function specialAlerts()
-		local currentRoom = waitForChild(workspace, { Name = "CurrentRoom" })
-		local model = waitForChild(currentRoom, { ClassName = "Model" })
 		local danger = nil
 
-		for _, folder in next, model:GetChildren() do
+		if not currentRoom:FindFirstChildWhichIsA("Model") then
+			return
+		end
+
+		for _, folder in next, currentRoom:FindFirstChildWhichIsA("Model"):GetChildren() do
 			if folder:IsA("Folder") and folder.Name == "FreeArea" then
 				for _, object in next, folder:GetChildren() do
 					if object.Name == "SproutTendril" and object:FindFirstChild("HumanoidRootPart") then
@@ -438,14 +410,16 @@ xpcall(function()
 	end
 
 	local function monstersAlert()
-		local currentRoom = waitForChild(workspace, { Name = "CurrentRoom" })
-		local model = waitForChild(currentRoom, { ClassName = "Model" })
+		if not currentRoom:FindFirstChildWhichIsA("Model") then
+			return
+		end
 
-		if model then
-			local monsters = waitForChild(model, { Name = "Monsters" })
-			for _, monster in next, monsters:GetChildren() do
-				if monster:FindFirstChild("ChasingValue") and monster.ChasingValue.Value == Character then
-					return true
+		for _, folder in next, currentRoom:FindFirstChildWhichIsA("Model"):GetChildren() do
+			if folder:IsA("Folder") and folder.Name == "Monsters" then
+				for _, monster in next, folder:GetChildren() do
+					if monster:FindFirstChild("ChasingValue") and monster.ChasingValue.Value == Character then
+						return true
+					end
 				end
 			end
 		end
@@ -455,18 +429,19 @@ xpcall(function()
 
 	local function monstersClose(distance)
 		distance = distance or 20
-		local currentRoom = waitForChild(workspace, { Name = "CurrentRoom" })
-		local model = waitForChild(currentRoom, { ClassName = "Model" })
 		local blockList = { "RazzleDazzleMonster", "RodgerMonster" }
 
-		if model then
-			local monsters = waitForChild(model, { Name = "Monsters" })
-			for _, monster in next, monsters:GetChildren() do
-				if monster:IsA("Model") and not table.find(blockList, monster.Name) then
-					local monsterRoot = waitForChild(monster, { Name = "HumanoidRootPart" })
+		if not currentRoom:FindFirstChildWhichIsA("Model") then
+			return
+		end
 
-					if (clientRoot.Position - monsterRoot.Position).magnitude <= distance then
-						return true
+		for _, folder in next, currentRoom:FindFirstChildWhichIsA("Model"):GetChildren() do
+			if folder:IsA("Folder") and folder.Name == "Monsters" then
+				for _, monster in next, folder:GetChildren() do
+					if not table.find(blockList, monster.Name) and monster:FindFirstChild("HumanoidRootPart") then
+						if (clientRoot.Position - monster.HumanoidRootPart.Position).magnitude <= distance then
+							return true
+						end
 					end
 				end
 			end
@@ -477,14 +452,18 @@ xpcall(function()
 
 	local bodyPosition
 	local function lerpTo(target)
+		if not clientRoot or not target then
+			return
+		end
+
 		local distance = (clientRoot.Position - target.Position).magnitude
 		local speedFactor = (60 * wait())
 		local estimatedTime = speedFactor / distance
 		local adjustedLerpAlpha = math.min(estimatedTime, 1)
 
-		if not clientRoot:FindFirstChild("AntiGravityLock") then
+		if not clientRoot:FindFirstChild("AntiGravity") then
 			bodyPosition = Instance.new("BodyPosition")
-			bodyPosition.Name = "AntiGravityLock"
+			bodyPosition.Name = "AntiGravity"
 			bodyPosition.MaxForce = Vector3.new(0, math.huge, 0)
 			bodyPosition.P = 20000
 			bodyPosition.D = 1500
@@ -498,6 +477,7 @@ xpcall(function()
 			if distance <= 20 and (monstersClose(20) or monstersAlert()) then
 				clientRoot.CFrame = CFrame.new(clientRoot.Position.X, (target.Position.Y - 2.5), clientRoot.Position.Z)
 			end
+
 			clientRoot.CFrame = clientRoot.CFrame:lerp(
 				CFrame.new(target.Position.X, (target.Position.Y - 2.5), target.Position.Z),
 				adjustedLerpAlpha
@@ -507,42 +487,48 @@ xpcall(function()
 	end
 
 	local function generators()
-		local currentRoom = waitForChild(workspace, { Name = "CurrentRoom" })
-		local model = waitForChild(currentRoom, { ClassName = "Model" })
 		local nearestGen, shortestDistance = nil, math.huge
 		local sproutParts = {}
 
-		if model then
-			local generatorsFolder = waitForChild(model, { Name = "Generators" })
-			local freeArea = waitForChild(model, { Name = "FreeArea" })
+		if not currentRoom:FindFirstChildWhichIsA("Model") then
+			return
+		end
 
-			for _, obj in next, freeArea:GetChildren() do
-				if obj.Name == "SproutTendril" and obj:FindFirstChild("HumanoidRootPart") then
-					sproutParts[#sproutParts + 1] = obj.HumanoidRootPart
+		for _, folder in next, currentRoom:FindFirstChildWhichIsA("Model"):GetChildren() do
+			if folder:IsA("Folder") and folder.Name == "FreeArea" then
+				for _, obj in next, folder:GetChildren() do
+					if obj.Name == "SproutTendril" and obj:FindFirstChild("HumanoidRootPart") then
+						sproutParts[#sproutParts + 1] = obj.HumanoidRootPart
+					end
 				end
 			end
+		end
 
-			for _, gen in next, generatorsFolder:GetChildren() do
-				local prompt = gen:FindFirstChild("Prompt")
-				local origin = gen:FindFirstChild("Origin")
-				local stats = gen:FindFirstChild("Stats")
-				if prompt and origin and stats then
-					local completed = stats:FindFirstChild("Completed")
-					local activePlayer = stats:FindFirstChild("ActivePlayer")
-					if completed and activePlayer and not completed.Value then
-						local isNearDanger = false
-						for _, hrp in next, sproutParts do
-							if (prompt.Position - hrp.Position).magnitude <= 30 then
-								isNearDanger = true
-								break
+		for _, folder in next, currentRoom:FindFirstChildWhichIsA("Model"):GetChildren() do
+			if folder:IsA("Folder") and folder.Name == "Generators" then
+				for _, gen in next, folder:GetChildren() do
+					local prompt = gen:FindFirstChild("Prompt")
+					local origin = gen:FindFirstChild("Origin")
+					local stats = gen:FindFirstChild("Stats")
+					if prompt and origin and stats then
+						local completed = stats:FindFirstChild("Completed")
+						local activePlayer = stats:FindFirstChild("ActivePlayer")
+						if completed and activePlayer and not completed.Value then
+							local isNearDanger = false
+
+							for _, spart in next, sproutParts do
+								if (origin.Position - spart.Position).magnitude <= 30 then
+									isNearDanger = true
+									break
+								end
 							end
-						end
 
-						if not isNearDanger then
-							local dist = (clientRoot.Position - origin.Position).magnitude
-							if dist < shortestDistance then
-								shortestDistance = dist
-								nearestGen = gen
+							if not isNearDanger then
+								local dist = (clientRoot.Position - origin.Position).magnitude
+								if dist < shortestDistance then
+									shortestDistance = dist
+									nearestGen = gen
+								end
 							end
 						end
 					end
@@ -554,11 +540,8 @@ xpcall(function()
 	end
 
 	local function bestCard()
-		local info = waitForChild(workspace, { Name = "Info" })
-		local cardVote = waitForChild(info, { Name = "CardVote" })
-
 		for i, v in next, cardVote:GetChildren() do
-			if v ~= nil and (v.Name == "Heal" or v.Name == "Heal2" or v.Name == "Machine") then
+			if v and (v.Name:find("Heal") or v.Name:find("Machine")) then
 				return v
 			end
 		end
@@ -568,17 +551,16 @@ xpcall(function()
 
 	local function stateCollide(parent, state)
 		local ignoreNames = {
-			DoorHitbox = true,
-			DoorVisible = true,
-			ElevatorHitBox = true,
+			"DoorHitbox",
+			"DoorVisible",
+			"ElevatorHitBox",
 		}
 
 		for _, part in parent:GetDescendants() do
 			if
 				part:IsA("BasePart")
 				and (part.CanCollide ~= state)
-				and not Character:IsAncestorOf(part)
-				and not ignoreNames[part.Name]
+				and not table.find(ignoreNames, part.Name)
 			then
 				part.CanCollide = state
 			end
@@ -605,26 +587,17 @@ xpcall(function()
 			end
 
 			local generator = generators()
-
-			local inElevator = waitForChild(clientStats, { Name = "InElevator" })
-			inElevator = inElevator.Value
-
-			local elevator = waitForChild(workspace, { Name = "Elevators" })
-			elevator = waitForChild(elevator, { Name = "Elevator" })
-			local forceZone = waitForChild(elevator, { Name = "ForceZone" })
-			local base = waitForChild(elevator, { Name = "Base" })
-
 			if generator then
-				local generatorOrigin = waitForChild(generator, { Name = "Origin" })
-				local generatorStats = waitForChild(generator, { Name = "Stats" })
-				local generatorStats_Completed = waitForChild(generatorStats, { Name = "Completed" })
-				local generatorStats_StopInteracting = waitForChild(generatorStats, { Name = "StopInteracting" })
+				local generatorOrigin = generator:FindFirstChild("Origin")
+				local generatorStats = generator:FindFirstChild("Stats")
+				local generatorStats_Completed = generatorStats:FindFirstChild("Completed")
+				local generatorStats_StopInteracting = generatorStats:FindFirstChild("StopInteracting")
 
 				if inElevator and not debounce then
 					repeat
 						wait()
 						clientRoot.CFrame = CFrame.new(clientRoot.Position.X, currentHeight, clientRoot.Position.Z)
-					until not Menu.Message.Visible or Menu.Message.Text:find("Elevator closes in")
+					until not gameMessage.Visible or gameMessage.Text:find("Elevator closes in")
 
 					repeat
 						wait()
@@ -636,10 +609,10 @@ xpcall(function()
 
 					generator = generators()
 					if generator then
-						generatorOrigin = waitForChild(generator, { Name = "Origin" })
-						generatorStats = waitForChild(generator, { Name = "Stats" })
-						generatorStats_Completed = waitForChild(generatorStats, { Name = "Completed" })
-						generatorStats_StopInteracting = waitForChild(generatorStats, { Name = "StopInteracting" })
+						generatorOrigin = generator:FindFirstChild("Origin")
+						generatorStats = generator:FindFirstChild("Stats")
+						generatorStats_Completed = generatorStats:FindFirstChild("Completed")
+						generatorStats_StopInteracting = generatorStats:FindFirstChild("StopInteracting")
 					end
 					debounce = true
 				else
@@ -690,9 +663,6 @@ xpcall(function()
 							end
 						until not specialAlerts()
 					else
-						local info = waitForChild(workspace, { Name = "Info" })
-						local elevatorPrompt = waitForChild(info, { Name = "ElevatorPrompt" })
-						local claimIcon = waitForChild(elevatorPrompt, { Name = "ClaimIcon" })
 						if claimIcon.Enabled then
 							repeat
 								wait()
@@ -720,24 +690,22 @@ xpcall(function()
 			end
 
 			collectClosestItems(true)
-			stateCollide(waitForChild(workspace, { Name = "CurrentRoom" }), false)
-			stateCollide(waitForChild(workspace, { Name = "Elevators" }), false)
+			stateCollide(currentRoom, false)
+			stateCollide(elevators, false)
 
-			local currentRoom = waitForChild(workspace, { Name = "CurrentRoom" })
-			local model = waitForChild(currentRoom, { ClassName = "Model" })
-			if model then
-				local monsters = waitForChild(model, { Name = "Monsters" })
-				local generators = waitForChild(model, { Name = "Generators" })
+			if currentRoom:FindFirstChildWhichIsA("Model") then
+				local model = currentRoom:FindFirstChildWhichIsA("Model")
+				local monsters = model:FindFirstChild("Monsters")
+				local generators = model:FindFirstChild("Generators")
 
 				for _, obj in next, model:GetDescendants() do
-					if obj:IsA("BasePart") or obj:IsA("Part") or obj:IsA("MeshPart") then
-						if
-							not obj:IsDescendantOf(monsters)
-							and not obj:IsDescendantOf(generators)
-							and obj.Transparency == 0
-						then
-							obj.Transparency = 1
-						end
+					if
+						obj:IsA("BasePart")
+						and not obj:IsDescendantOf(monsters)
+						and not obj:IsDescendantOf(generators)
+						and obj.Transparency == 0
+					then
+						obj.Transparency = 1
 					end
 				end
 			end
@@ -759,7 +727,7 @@ xpcall(function()
 		Library:Unload()
 	end)
 
-	local Version = "0.0.2.7"
+	local Version = "0.0.3"
 	local Author = "Kain"
 	local Window = Library:CreateWindow({
 		Title = "Dandys World",
@@ -858,13 +826,13 @@ xpcall(function()
 			Settings.AutoFarm = state
 			saveSettings()
 
-			if not Settings.AutoFarm and clientRoot:FindFirstChild("AntiGravityLock") then
-				clientRoot.AntiGravityLock:Remove()
+			if not Settings.AutoFarm and clientRoot:FindFirstChild("AntiGravity") then
+				clientRoot.AntiGravity:Remove()
 				wait(0.1)
 				backToElevator()
 				wait(0.1)
-				stateCollide(waitForChild(workspace, { Name = "CurrentRoom" }), true)
-				stateCollide(waitForChild(workspace, { Name = "Elevators" }), true)
+				stateCollide(currentRoom, true)
+				stateCollide(elevators, true)
 			end
 		end,
 	})
