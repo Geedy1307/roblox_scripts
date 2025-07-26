@@ -166,19 +166,19 @@ xpcall(function()
 	local function waitForChild(parent, target)
 		local child = parent:FindFirstChild(target)
 		if child then
-			print("Found: " .. child)
+			print("Found: " .. tostring(child))
 			return child
 		end
 
 		for _, v in next, parent:GetChildren() do
 			if v.ClassName == target then
-				print("Found: " .. v)
+				print("Found: " .. tostring(v))
 				return v
 			end
 		end
 
 		while true do
-			print("Waiting for: " .. target)
+			print("Waiting for: " .. tostring(target))
 
 			local newChild = parent.ChildAdded:Wait()
 			if newChild.Name == target or newChild.ClassName == target then
