@@ -441,12 +441,11 @@ xpcall(function()
 		local currentRoom = waitForChild(workspace, { Name = "CurrentRoom" })
 		local model = waitForChild(currentRoom, { ClassName = "Model" })
 
-		for _, folder in next, model:GetChildren() do
-			if folder:IsA("Folder") and folder.Name == "Monsters" then
-				for _, monster in next, folder:GetChildren() do
-					if monster:FindFirstChild("ChasingValue") and monster.ChasingValue.Value == Character then
-						return true
-					end
+		if model then
+			local monsters = waitForChild(model, { Name = "Monsters" })
+			for _, monster in next, monsters:GetChildren() do
+				if monster:FindFirstChild("ChasingValue") and monster.ChasingValue.Value == Character then
+					return true
 				end
 			end
 		end
@@ -455,18 +454,19 @@ xpcall(function()
 	end
 
 	local function monstersClose(distance)
-		distance = distance or 30
+		distance = distance or 20
 		local currentRoom = waitForChild(workspace, { Name = "CurrentRoom" })
 		local model = waitForChild(currentRoom, { ClassName = "Model" })
-
 		local blockList = { "RazzleDazzleMonster", "RodgerMonster" }
-		for _, folder in next, model:GetChildren() do
-			if folder:IsA("Folder") and folder.Name == "Monsters" then
-				for _, monster in next, folder:GetChildren() do
-					if monster:IsA("Model") and monster.PrimaryPart and not table.find(blockList, monster.Name) then
-						if (clientRoot.Position - monster.PrimaryPart.Position).magnitude <= distance then
-							return true
-						end
+
+		if model then
+			local monsters = waitForChild(model, { Name = "Monsters" })
+			for _, monster in next, monsters:GetChildren() do
+				if monster:IsA("Model") and not table.find(blockList, monster.Name) then
+					local monsterRoot = waitForChild(monster, { Name = "HumanoidRootPart" })
+
+					if (clientRoot.Position - monsterRoot.Position).magnitude <= distance then
+						return true
 					end
 				end
 			end
@@ -495,7 +495,7 @@ xpcall(function()
 			clientRoot.CFrame = clientRoot.CFrame:lerp(CFrame.new(target.Position), adjustedLerpAlpha)
 			bodyPosition.Position = Vector3.new(clientRoot.Position.X, target.Position.Y, clientRoot.Position.Z)
 		else
-			if monstersClose(20) or (monstersAlert() and distance <= 20) then
+			if distance <= 20 and (monstersClose(20) or monstersAlert()) then
 				clientRoot.CFrame = CFrame.new(clientRoot.Position.X, (target.Position.Y - 2.5), clientRoot.Position.Z)
 			end
 			clientRoot.CFrame = clientRoot.CFrame:lerp(
@@ -509,46 +509,41 @@ xpcall(function()
 	local function generators()
 		local currentRoom = waitForChild(workspace, { Name = "CurrentRoom" })
 		local model = waitForChild(currentRoom, { ClassName = "Model" })
-
+		local nearestGen, shortestDistance = nil, math.huge
 		local sproutParts = {}
-		do
-			local freeArea = model:FindFirstChild("FreeArea")
-			if freeArea then
-				for _, obj in next, freeArea:GetChildren() do
-					if obj.Name == "SproutTendril" then
-						local hrp = obj:FindFirstChild("HumanoidRootPart")
-						if hrp then
-							sproutParts[#sproutParts + 1] = hrp
-						end
-					end
+
+		if model then
+			local generatorsFolder = waitForChild(model, { Name = "Generators" })
+			local freeArea = waitForChild(model, { Name = "FreeArea" })
+
+			for _, obj in next, freeArea:GetChildren() do
+				if obj.Name == "SproutTendril" and obj:FindFirstChild("HumanoidRootPart") then
+					sproutParts[#sproutParts + 1] = obj.HumanoidRootPart
 				end
 			end
-		end
 
-		local nearestGen, shortestDistance = nil, math.huge
-		local generatorsFolder = waitForChild(model, { Name = "Generators" })
-
-		for _, gen in next, generatorsFolder:GetChildren() do
-			local prompt = gen:FindFirstChild("Prompt")
-			local origin = gen:FindFirstChild("Origin")
-			local stats = gen:FindFirstChild("Stats")
-			if prompt and origin and stats then
-				local completed = stats:FindFirstChild("Completed")
-				local activePlayer = stats:FindFirstChild("ActivePlayer")
-				if completed and activePlayer and not completed.Value then
-					local isNearDanger = false
-					for _, hrp in next, sproutParts do
-						if (prompt.Position - hrp.Position).magnitude <= 30 then
-							isNearDanger = true
-							break
+			for _, gen in next, generatorsFolder:GetChildren() do
+				local prompt = gen:FindFirstChild("Prompt")
+				local origin = gen:FindFirstChild("Origin")
+				local stats = gen:FindFirstChild("Stats")
+				if prompt and origin and stats then
+					local completed = stats:FindFirstChild("Completed")
+					local activePlayer = stats:FindFirstChild("ActivePlayer")
+					if completed and activePlayer and not completed.Value then
+						local isNearDanger = false
+						for _, hrp in next, sproutParts do
+							if (prompt.Position - hrp.Position).magnitude <= 30 then
+								isNearDanger = true
+								break
+							end
 						end
-					end
 
-					if not isNearDanger then
-						local dist = (clientRoot.Position - origin.Position).magnitude
-						if dist < shortestDistance then
-							shortestDistance = dist
-							nearestGen = gen
+						if not isNearDanger then
+							local dist = (clientRoot.Position - origin.Position).magnitude
+							if dist < shortestDistance then
+								shortestDistance = dist
+								nearestGen = gen
+							end
 						end
 					end
 				end
@@ -593,23 +588,6 @@ xpcall(function()
 			end
 		end
 	end
-
-	local currentRoom = waitForChild(workspace, { Name = "CurrentRoom" })
-	currentRoom.ChildAdded:Connect(function(child)
-		if child:IsA("Model") and Settings.AutoFarm then
-			local model = child
-			local monsters = waitForChild(model, { Name = "Monsters" })
-			local generators = waitForChild(model, { Name = "Generators" })
-
-			for _, obj in next, model:GetDescendants() do
-				if obj:IsA("BasePart") or obj:IsA("Part") or obj:IsA("MeshPart") then
-					if not obj:IsDescendantOf(monsters) and not obj:IsDescendantOf(generators) and obj.Transparency == 0 then
-						obj.Transparency = 1
-					end
-				end
-			end
-		end
-	end)
 
 	local loopApplyESP = coroutine.create(function()
 		while wait(1) do
@@ -660,45 +638,27 @@ xpcall(function()
 					if generator then
 						generatorOrigin = waitForChild(generator, { Name = "Origin" })
 						generatorStats = waitForChild(generator, { Name = "Stats" })
-						if generatorStats then
-							generatorStats_Completed = waitForChild(generatorStats, { Name = "Completed" })
-							generatorStats_StopInteracting = waitForChild(generatorStats, { Name = "StopInteracting" })
-						end
+						generatorStats_Completed = waitForChild(generatorStats, { Name = "Completed" })
+						generatorStats_StopInteracting = waitForChild(generatorStats, { Name = "StopInteracting" })
 					end
 					debounce = true
 				else
 					repeat
 						wait()
-						if not Settings.AutoFarm then
+						if not Settings.AutoFarm or specialAlerts() then
 							break
 						end
 
 						if monstersClose(20) or monstersAlert() then
 							generatorStats_StopInteracting:FireServer("Stop")
-
-							if specialAlerts() then
-								generator = generators()
-								if not generator then
-									break
-								end
-								generatorOrigin = waitForChild(generator, { Name = "Origin" })
-								generatorStats = waitForChild(generator, { Name = "Stats" })
-								if generatorStats then
-									generatorStats_Completed = waitForChild(generatorStats, { Name = "Completed" })
-									generatorStats_StopInteracting =
-										waitForChild(generatorStats, { Name = "StopInteracting" })
-								end
-							end
 						end
 
-						if generatorOrigin then
-							lerpTo(generatorOrigin)
-							if (clientRoot.Position - generatorOrigin.Position).magnitude <= 1 then
-								interactPrompt(generator)
-							end
+						lerpTo(generatorOrigin)
+						if (clientRoot.Position - generatorOrigin.Position).magnitude <= 2 then
+							interactPrompt(generator)
 						end
 					until generatorStats_Completed.Value
-					if generatorOrigin then
+					if generatorOrigin and not specialAlerts() then
 						clientRoot.CFrame =
 							CFrame.new(clientRoot.Position.X, generatorOrigin.Position.Y - 2.5, clientRoot.Position.Z)
 					end
@@ -706,7 +666,7 @@ xpcall(function()
 			else
 				if inElevator then
 					repeat
-						wait(1)
+						wait()
 						if not Settings.AutoFarm then
 							break
 						end
@@ -762,6 +722,25 @@ xpcall(function()
 			collectClosestItems(true)
 			stateCollide(waitForChild(workspace, { Name = "CurrentRoom" }), false)
 			stateCollide(waitForChild(workspace, { Name = "Elevators" }), false)
+
+			local currentRoom = waitForChild(workspace, { Name = "CurrentRoom" })
+			local model = waitForChild(currentRoom, { ClassName = "Model" })
+			if model then
+				local monsters = waitForChild(model, { Name = "Monsters" })
+				local generators = waitForChild(model, { Name = "Generators" })
+
+				for _, obj in next, model:GetDescendants() do
+					if obj:IsA("BasePart") or obj:IsA("Part") or obj:IsA("MeshPart") then
+						if
+							not obj:IsDescendantOf(monsters)
+							and not obj:IsDescendantOf(generators)
+							and obj.Transparency == 0
+						then
+							obj.Transparency = 1
+						end
+					end
+				end
+			end
 		end
 	end)
 
