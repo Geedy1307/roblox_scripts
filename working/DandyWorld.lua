@@ -5,10 +5,16 @@ repeat
 until game:IsLoaded()
 repeat
 	wait()
-until workspace:FindFirstChild("CurrentRoom")
+until game:GetService("Players").LocalPlayer
 repeat
 	wait()
-until workspace:FindFirstChild("CurrentRoom"):FindFirstAncestorWhichIsA("Model")
+until game:GetService("Players").LocalPlayer.PlayerGui:FindFirstChild("ScreenGui")
+repeat
+	wait()
+until game:GetService("Players").LocalPlayer.PlayerGui.ScreenGui:FindFirstChild("Menu")
+repeat
+	wait()
+until game:GetService("Players").LocalPlayer.PlayerGui.ScreenGui.Menu:FindFirstChild("SkillCheckFrame")
 
 local defaultSettings = {
 	FullBright = false,
