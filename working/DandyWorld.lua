@@ -15,6 +15,9 @@ until game:GetService("Players").LocalPlayer.PlayerGui.ScreenGui:FindFirstChild(
 repeat
 	wait()
 until game:GetService("Players").LocalPlayer.PlayerGui.ScreenGui.Menu:FindFirstChild("SkillCheckFrame")
+repeat
+	wait()
+until game:GetService("Players").LocalPlayer.Character
 
 local defaultSettings = {
 	FullBright = false,
