@@ -795,7 +795,7 @@ xpcall(function()
 		Library:Unload()
 	end)
 
-	local Version = "0.0.2.3"
+	local Version = "0.0.2.4"
 	local Author = "Kain"
 	local Window = Library:CreateWindow({
 		Title = "Dandys World",
