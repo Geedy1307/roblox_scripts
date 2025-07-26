@@ -4,6 +4,10 @@ repeat
 	wait()
 until game:IsLoaded()
 
+repeat
+	wait()
+until workspace:FindFirstChild("CurrentRoom") and workspace.CurrentRoom:FindFirstChildWhichIsA("Model")
+
 local defaultSettings = {
 	FullBright = false,
 	AutoSkillCheck = false,
@@ -163,67 +167,32 @@ setmetatable(Cleaner, {
 --#endregionF
 
 xpcall(function()
-	local function waitForChild(parent, target)
-		local child = parent:FindFirstChild(target)
-		if child then
-			print("Found: " .. tostring(child))
-			return child
-		end
-
-		for _, v in next, parent:GetChildren() do
-			if v.ClassName == target then
-				print("Found: " .. tostring(v))
-				return v
-			end
-		end
-
-		while true do
-			print("Waiting for: " .. tostring(target))
-
-			local newChild = parent.ChildAdded:Wait()
-			if newChild.Name == target or newChild.ClassName == target then
-				return newChild
-			end
-		end
-
-		return nil
-	end
-
 	local Lighting = game:GetService("Lighting")
 	local VirtualInputManager = game:GetService("VirtualInputManager")
 	local ReplicatedStorage = game:GetService("ReplicatedStorage")
 	local Players = game:GetService("Players")
 	local Client = Players.LocalPlayer
 	local playerGui = Client.PlayerGui
-
-	local screenGui = waitForChild(playerGui, "ScreenGui")
-	local menuGui = waitForChild(screenGui, "Menu")
-	local gameMessage = waitForChild(menuGui, "Message")
-	local skillCheckFrame = waitForChild(menuGui, "SkillCheckFrame")
-	local marker = waitForChild(skillCheckFrame, "Marker")
-	local goldArea = waitForChild(skillCheckFrame, "GoldArea")
-
+	local menuGui = playerGui:WaitForChild("ScreenGui"):WaitForChild("Menu")
+	local skillCheckFrame = menuGui:WaitForChild("SkillCheckFrame")
 	local Character = Client.Character or Client.CharacterAdded:Wait()
-	local clientRoot = waitForChild(Character, "HumanoidRootPart")
-	local clientHumanoid = waitForChild(Character, "Humanoid")
-	local clientInventory = waitForChild(Character, "Inventory")
-
-	local clientStats = waitForChild(Character, "Stats")
-	local inElevator = waitForChild(clientStats, "InElevator") and clientStats.InElevator.Value
-
-	local currentRoom = waitForChild(workspace, "CurrentRoom")
-
-	local elevators = waitForChild(workspace, "Elevators")
-	local elevator = waitForChild(elevators, "Elevator")
-	local forceZone = waitForChild(elevator, "ForceZone")
-	local base = waitForChild(elevator, "Base")
-
-	local roundInfo = waitForChild(workspace, "Info")
-	local elevatorPrompt = waitForChild(roundInfo, "ElevatorPrompt")
-	local claimIcon = waitForChild(elevatorPrompt, "ClaimIcon")
-	local cardVote = waitForChild(roundInfo, "CardVote")
-
-	local baseTrigger = waitForChild(workspace, "BaseplateTrigger")
+	local clientRoot, clientHumanoid, clientInventory, clientStats
+	Client.CharacterAdded:Connect(function(newChar)
+		Character = newChar
+		clientRoot = Character:WaitForChild("HumanoidRootPart")
+		clientHumanoid = Character:WaitForChild("Humanoid")
+		clientInventory = Character:WaitForChild("Inventory")
+		clientStats = Character:WaitForChild("Stats")
+	end)
+	clientRoot = Character:WaitForChild("HumanoidRootPart")
+	clientHumanoid = Character:WaitForChild("Humanoid")
+	clientInventory = Character:WaitForChild("Inventory")
+	clientStats = Character:WaitForChild("Stats")
+	local currentRoom = workspace:WaitForChild("CurrentRoom")
+	local elevators = workspace:WaitForChild("Elevators")
+	local elevator = elevators:WaitForChild("Elevator")
+	local roundInfo = workspace:WaitForChild("Info")
+	local baseTrigger = workspace:WaitForChild("BaseplateTrigger")
 
 	Client.CameraMaxZoomDistance = 200
 
@@ -322,6 +291,9 @@ xpcall(function()
 
 	local function tryAutoSkillCheck()
 		if skillCheckFrame.Visible and Settings.AutoSkillCheck then
+			local marker = skillCheckFrame:WaitForChild("Marker")
+			local goldArea = skillCheckFrame:WaitForChild("GoldArea")
+
 			if marker and goldArea and isWithinGoldArea(marker, goldArea) then
 				VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
 			end
@@ -339,8 +311,8 @@ xpcall(function()
 	end
 
 	bindChanges(skillCheckFrame)
-	bindChanges(marker)
-	bindChanges(goldArea)
+	bindChanges(skillCheckFrame:WaitForChild("Marker"))
+	bindChanges(skillCheckFrame:WaitForChild("GoldArea"))
 
 	--[[ ESP ]]
 	local function addESP(target, fillcolor)
@@ -560,7 +532,7 @@ xpcall(function()
 	end
 
 	local function bestCard()
-		for i, v in next, cardVote:GetChildren() do
+		for i, v in next, roundInfo.CardVote:GetChildren() do
 			if v and (v.Name:find("Heal") or v.Name:find("Machine")) then
 				return v
 			end
@@ -603,6 +575,8 @@ xpcall(function()
 			end
 
 			local generator = generators()
+			local inElevator = clientStats:FindFirstChild("InElevator") and clientStats.InElevator.Value
+
 			if generator then
 				local generatorOrigin = generator:FindFirstChild("Origin")
 				local generatorStats = generator:FindFirstChild("Stats")
@@ -613,15 +587,15 @@ xpcall(function()
 					repeat
 						wait()
 						clientRoot.CFrame = CFrame.new(clientRoot.Position.X, currentHeight, clientRoot.Position.Z)
-					until not gameMessage.Visible or gameMessage.Text:find("Elevator closes in")
+					until not menuGui.Message.Visible or menuGui.Message.Text:find("Elevator closes in")
 
 					repeat
 						wait()
 						if not Settings.AutoFarm then
 							break
 						end
-						lerpTo(forceZone)
-					until (clientRoot.Position - forceZone.Position).magnitude <= 3
+						lerpTo(elevator.ForceZone)
+					until (clientRoot.Position - elevator.ForceZone.Position).magnitude <= 3
 
 					generator = generators()
 					if generator then
@@ -672,26 +646,26 @@ xpcall(function()
 								break
 							end
 
-							if (clientRoot.Position - base.Position).magnitude > 30 then
+							if (clientRoot.Position - elevator.Base.Position).magnitude > 30 then
 								backToElevator()
 							else
-								lerpTo(base)
+								lerpTo(elevator.Base)
 							end
 						until not specialAlerts()
 					else
-						if claimIcon.Enabled then
+						if roundInfo.ElevatorPrompt.ClaimIcon.Enabled then
 							repeat
 								wait()
 								if not Settings.AutoFarm then
 									break
 								end
 
-								if (clientRoot.Position - base.Position).magnitude > 30 then
+								if (clientRoot.Position - elevator.Base.Position).magnitude > 30 then
 									backToElevator()
 								else
-									lerpTo(base)
+									lerpTo(elevator.Base)
 								end
-							until not claimIcon.Enabled
+							until not roundInfo.ElevatorPrompt.ClaimIcon.Enabled
 						end
 					end
 				end
