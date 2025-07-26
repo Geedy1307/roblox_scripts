@@ -180,8 +180,8 @@ xpcall(function()
 	local gameMessage = Menu:WaitForChild("Message")
 
 	local skillCheckFrame = Menu:WaitForChild("SkillCheckFrame")
-	local marker = Menu:WaitForChild("Marker")
-	local goldArea = Menu:WaitForChild("GoldArea")
+	local marker = skillCheckFrame:WaitForChild("Marker")
+	local goldArea = skillCheckFrame:WaitForChild("GoldArea")
 
 	local Character = Client.Character or Client.CharacterAdded:Wait()
 	local clientRoot = Character:WaitForChild("HumanoidRootPart")
@@ -557,11 +557,7 @@ xpcall(function()
 		}
 
 		for _, part in parent:GetDescendants() do
-			if
-				part:IsA("BasePart")
-				and (part.CanCollide ~= state)
-				and not table.find(ignoreNames, part.Name)
-			then
+			if part:IsA("BasePart") and (part.CanCollide ~= state) and not table.find(ignoreNames, part.Name) then
 				part.CanCollide = state
 			end
 
