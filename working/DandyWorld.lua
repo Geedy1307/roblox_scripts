@@ -596,16 +596,14 @@ xpcall(function()
 
 	local currentRoom = waitForChild(workspace, { Name = "CurrentRoom" })
 	currentRoom.ChildAdded:Connect(function(child)
-		if child:IsA("Model") then
+		if child:IsA("Model") and Settings.AutoFarm then
 			local model = child
 			local monsters = waitForChild(model, { Name = "Monsters" })
 			local generators = waitForChild(model, { Name = "Generators" })
 
 			for _, obj in next, model:GetDescendants() do
 				if obj:IsA("BasePart") or obj:IsA("Part") or obj:IsA("MeshPart") then
-					if obj:IsDescendantOf(monsters) or obj:IsDescendantOf(generators) then
-						obj.Transparency = 0
-					else
+					if not obj:IsDescendantOf(monsters) and not obj:IsDescendantOf(generators) then
 						obj.Transparency = 1
 					end
 				end
@@ -782,7 +780,7 @@ xpcall(function()
 		Library:Unload()
 	end)
 
-	local Version = "0.0.2.5"
+	local Version = "0.0.2.6"
 	local Author = "Kain"
 	local Window = Library:CreateWindow({
 		Title = "Dandys World",
