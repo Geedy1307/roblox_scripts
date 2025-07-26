@@ -594,36 +594,24 @@ xpcall(function()
 		end
 	end
 
-	local function hideParts()
-		local currentRoom = waitForChild(workspace, { Name = "CurrentRoom" })
-		local elevators = waitForChild(workspace, { Name = "Elevators" })
-		local model = waitForChild(currentRoom, { ClassName = "Model" })
-		local monsters = waitForChild(model, { ClassName = "Monsters" })
-		local generators = waitForChild(model, { ClassName = "Generators" })
-		
-		local allowedObjects = {
-			monsters,
-			generators,
-			elevators,
-			Character,
-		}
+	local currentRoom = waitForChild(workspace, { Name = "CurrentRoom" })
+	currentRoom.ChildAdded:Connect(function(child)
+		if child:IsA("Model") then
+			local model = child
+			local monsters = waitForChild(model, { Name = "Monsters" })
+			local generators = waitForChild(model, { Name = "Generators" })
 
-		for _, obj in next, workspace:GetDescendants() do
-			if obj:IsA("BasePart") or obj:IsA("MeshPart") or obj:IsA("Part") then
-				local parentAllowed = false
-				for _, allowed in allowedObjects do
-					if allowed and obj:IsDescendantOf(allowed) then
-						parentAllowed = true
-						break
+			for _, obj in next, model:GetDescendants() do
+				if obj:IsA("BasePart") or obj:IsA("Part") or obj:IsA("MeshPart") then
+					if obj:IsDescendantOf(monsters) or obj:IsDescendantOf(generators) then
+						obj.Transparency = 0
+					else
+						obj.Transparency = 1
 					end
-				end
-
-				if parentAllowed == false and obj.Transparency == 0 then
-					obj.Transparency = 1
 				end
 			end
 		end
-	end
+	end)
 
 	local loopApplyESP = coroutine.create(function()
 		while wait(1) do
@@ -773,7 +761,6 @@ xpcall(function()
 				continue
 			end
 
-			hideParts()
 			collectClosestItems(true)
 			stateCollide(waitForChild(workspace, { Name = "CurrentRoom" }), false)
 			stateCollide(waitForChild(workspace, { Name = "Elevators" }), false)
@@ -795,7 +782,7 @@ xpcall(function()
 		Library:Unload()
 	end)
 
-	local Version = "0.0.2.4"
+	local Version = "0.0.2.5"
 	local Author = "Kain"
 	local Window = Library:CreateWindow({
 		Title = "Dandys World",
