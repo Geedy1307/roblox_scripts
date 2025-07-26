@@ -457,7 +457,7 @@ xpcall(function()
 		end
 
 		local distance = (clientRoot.Position - target.Position).magnitude
-		local speedFactor = (60 * wait())
+		local speedFactor = (50 * wait())
 		local estimatedTime = speedFactor / distance
 		local adjustedLerpAlpha = math.min(estimatedTime, 1)
 
