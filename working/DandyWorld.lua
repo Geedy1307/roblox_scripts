@@ -603,7 +603,7 @@ xpcall(function()
 
 			for _, obj in next, model:GetDescendants() do
 				if obj:IsA("BasePart") or obj:IsA("Part") or obj:IsA("MeshPart") then
-					if not obj:IsDescendantOf(monsters) and not obj:IsDescendantOf(generators) then
+					if not obj:IsDescendantOf(monsters) and not obj:IsDescendantOf(generators) and obj.Transparency == 0 then
 						obj.Transparency = 1
 					end
 				end
