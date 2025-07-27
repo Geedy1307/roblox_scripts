@@ -324,7 +324,7 @@ xpcall(function()
 			highlight.Enabled = true
 			highlight.FillColor = fillcolor
 			highlight.OutlineColor = Color3.fromRGB(255, 255, 255) -- Set outline color to white
-			highlight.FillTransparency = 0.5 -- Set fill transparency
+			highlight.FillTransparency = 0.25 -- Set fill transparency
 			highlight.OutlineTransparency = 0 -- No transparency on the outline
 		end
 	end
@@ -449,7 +449,7 @@ xpcall(function()
 		end
 
 		local distance = (clientRoot.Position - target.Position).magnitude
-		local speedFactor = (50 * wait())
+		local speedFactor = (60 * wait())
 		local estimatedTime = speedFactor / distance
 		local adjustedLerpAlpha = math.min(estimatedTime, 1)
 
@@ -467,14 +467,14 @@ xpcall(function()
 			bodyPosition.Position = Vector3.new(clientRoot.Position.X, target.Position.Y, clientRoot.Position.Z)
 		else
 			if distance <= 20 and (monstersClose(20) or monstersAlert()) then
-				clientRoot.CFrame = CFrame.new(clientRoot.Position.X, (target.Position.Y - 2.5), clientRoot.Position.Z)
+				clientRoot.CFrame = CFrame.new(clientRoot.Position.X, (target.Position.Y - 2.25), clientRoot.Position.Z)
 			end
 
 			clientRoot.CFrame = clientRoot.CFrame:lerp(
-				CFrame.new(target.Position.X, (target.Position.Y - 2.5), target.Position.Z),
+				CFrame.new(target.Position.X, (target.Position.Y - 2.25), target.Position.Z),
 				adjustedLerpAlpha
 			)
-			bodyPosition.Position = Vector3.new(clientRoot.Position.X, target.Position.Y - 2.5, clientRoot.Position.Z)
+			bodyPosition.Position = Vector3.new(clientRoot.Position.X, target.Position.Y - 2.25, clientRoot.Position.Z)
 		end
 	end
 
@@ -623,7 +623,7 @@ xpcall(function()
 					until generatorStats_Completed.Value
 					if generatorOrigin and not specialAlerts() then
 						clientRoot.CFrame =
-							CFrame.new(clientRoot.Position.X, generatorOrigin.Position.Y - 2.5, clientRoot.Position.Z)
+							CFrame.new(clientRoot.Position.X, generatorOrigin.Position.Y - 2.25, clientRoot.Position.Z)
 					end
 				end
 			else
@@ -683,22 +683,22 @@ xpcall(function()
 			stateCollide(currentRoom, false)
 			stateCollide(elevators, false)
 
-			if currentRoom:FindFirstChildWhichIsA("Model") then
-				local model = currentRoom:FindFirstChildWhichIsA("Model")
-				local monsters = model:FindFirstChild("Monsters")
-				local generators = model:FindFirstChild("Generators")
+			-- if currentRoom:FindFirstChildWhichIsA("Model") then
+			-- 	local model = currentRoom:FindFirstChildWhichIsA("Model")
+			-- 	local monsters = model:FindFirstChild("Monsters")
+			-- 	local generators = model:FindFirstChild("Generators")
 
-				for _, obj in next, model:GetDescendants() do
-					if
-						obj:IsA("BasePart")
-						and not obj:IsDescendantOf(monsters)
-						and not obj:IsDescendantOf(generators)
-						and obj.Transparency == 0
-					then
-						obj.Transparency = 1
-					end
-				end
-			end
+			-- 	for _, obj in next, model:GetDescendants() do
+			-- 		if
+			-- 			obj:IsA("BasePart")
+			-- 			and not obj:IsDescendantOf(monsters)
+			-- 			and not obj:IsDescendantOf(generators)
+			-- 			and obj.Transparency == 0
+			-- 		then
+			-- 			obj.Transparency = 1
+			-- 		end
+			-- 	end
+			-- end
 		end
 	end)
 
@@ -717,7 +717,7 @@ xpcall(function()
 		Library:Unload()
 	end)
 
-	local Version = "0.0.3"
+	local Version = "0.0.1"
 	local Author = "Kain"
 	local Window = Library:CreateWindow({
 		Title = "Dandys World",
