@@ -621,7 +621,7 @@ xpcall(function()
 							interactPrompt(generator)
 						end
 					until generatorStats_Completed.Value
-					if generatorOrigin and not specialAlerts() then
+					if generatorOrigin then
 						clientRoot.CFrame =
 							CFrame.new(clientRoot.Position.X, generatorOrigin.Position.Y - 2.25, clientRoot.Position.Z)
 					end
