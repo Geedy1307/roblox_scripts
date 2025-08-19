@@ -1,15 +1,21 @@
 local wait = task.wait
 
-repeat wait() until game:IsLoaded()
-repeat wait() until game.Players.LocalPlayer
-repeat wait() until game.Players.LocalPlayer:GetAttribute("GUILoaded")
+repeat
+	wait()
+until game:IsLoaded()
+repeat
+	wait()
+until game.Players.LocalPlayer
+repeat
+	wait()
+until game.Players.LocalPlayer:GetAttribute("GUILoaded")
 
 local defaultSettings = {
-    AutoStart = false,
-    AutoVote = false,
-    AutoNext = false,
-    AutoRetry = false,
-    AutoUpgrade = false,
+	AutoStart = false,
+	AutoVote = false,
+	AutoNext = false,
+	AutoRetry = false,
+	AutoUpgrade = false,
 	FocusRangerStage = false,
 	FocusChallenge = false,
 	FocusPortal = false,
@@ -27,12 +33,18 @@ local defaultSettings = {
 	AutoTraitReroll = false,
 }
 local HttpS = game:GetService("HttpService")
-local FileName = 'anime_rangers_x(ID_'..game.Players.LocalPlayer.UserId..').json'
-if not pcall(function() readfile(FileName) end) then writefile(FileName, HttpS:JSONEncode(defaultSettings)) end
+local FileName = "anime_rangers_x(ID_" .. game.Players.LocalPlayer.UserId .. ").json"
+if not pcall(function()
+	readfile(FileName)
+end) then
+	writefile(FileName, HttpS:JSONEncode(defaultSettings))
+end
 local Settings = HttpS:JSONDecode(readfile(FileName))
-function saveSettings() writefile(FileName, HttpS:JSONEncode(Settings)) end
+function saveSettings()
+	writefile(FileName, HttpS:JSONEncode(Settings))
+end
 
-local USERCONSOLE = false
+local USERCONSOLE = true
 local Version = "0.0.1"
 local SubVersion = "L_Kain"
 
@@ -107,7 +119,7 @@ function Cleaner.Register(Object)
 		Clean = function()
 			Cleaner.CleanOne(Object)
 		end,
-    }
+	}
 end
 
 function Cleaner.Clean()
@@ -174,33 +186,34 @@ setmetatable(Cleaner, {
 
 xpcall(function()
 	local VirtualInputManager = game:GetService("VirtualInputManager")
-    local Players = game:GetService("Players")
+	local Players = game:GetService("Players")
 	local ReplicatedStorage = game:GetService("ReplicatedStorage")
 	local RunService = game:GetService("RunService")
 	local Client = Players.LocalPlayer
 	local playerData = ReplicatedStorage:WaitForChild("Player_Data")
 	local clientData = playerData:WaitForChild(Client.Name)
-    local clientChar, clientRoot
+	local clientChar, clientRoot
 	Cleaner(Client.CharacterAdded:Connect(function(newChar)
-        clientChar = newChar
-        clientRoot = clientChar:WaitForChild("HumanoidRootPart")
-    end))
+		clientChar = newChar
+		clientRoot = clientChar:WaitForChild("HumanoidRootPart")
+	end))
 
 	if Client.Character then
-        clientChar = Client.Character or Client.CharacterAdded:Wait()
-        clientRoot = clientChar:WaitForChild("HumanoidRootPart")
+		clientChar = Client.Character or Client.CharacterAdded:Wait()
+		clientRoot = clientChar:WaitForChild("HumanoidRootPart")
 	end
 
-	local statRankList = {"O+", "O", "O-", "SSS", "SS", "S+", "S", "S-", "A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-"}
+	local statRankList =
+		{ "O+", "O", "O-", "SSS", "SS", "S+", "S", "S-", "A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-" }
 
 	local function traitRanks()
 		local traitRankText = {}
 		local traitRankMap = {}
 
 		for traitName, traitInfo in next, require(ReplicatedStorage.Shared.Info.Trait) do
-			table.insert(traitRankMap, {Name = traitName, Chance = tonumber(traitInfo.Weight)})
+			table.insert(traitRankMap, { Name = traitName, Chance = tonumber(traitInfo.Weight) })
 		end
-		
+
 		table.sort(traitRankMap, function(a, b)
 			return a.Chance < b.Chance
 		end)
@@ -211,7 +224,7 @@ xpcall(function()
 
 		return {
 			traitRankText = traitRankText,
-			traitRankMap = traitRankMap
+			traitRankMap = traitRankMap,
 		}
 	end
 
@@ -229,52 +242,52 @@ xpcall(function()
 
 	local function dataWorlds()
 		local worlds = {}
-		for i,v in next, ReplicatedStorage.Shared.Info.GameWorld.World:GetChildren() do
+		for i, v in next, ReplicatedStorage.Shared.Info.GameWorld.World:GetChildren() do
 			local data = require(v)[tostring(v)]
-			
+
 			if data.StoryAble then
 				table.insert(worlds, data)
 			end
 		end
-	
+
 		table.sort(worlds, function(a, b)
 			local aNum = a.LayoutOrder or 0
 			local bNum = b.LayoutOrder or 0
 			return aNum < bNum
 		end)
-	
+
 		return worlds
 	end
 
 	local function remoteWorld()
-        local world = nil
-        for i,v in next, ReplicatedStorage.Shared.Info.GameWorld.World:GetChildren() do
+		local world = nil
+		for i, v in next, ReplicatedStorage.Shared.Info.GameWorld.World:GetChildren() do
 			local module = require(v)
 			local data = module[tostring(v)]
-			if data and data.Name and data.Name == Settings.World then
-                world = tostring(v)
+			if data and data.Name and data.Name:find(Settings.World) then
+				world = tostring(v)
 				break
 			end
-        end
-		
-        return world
-    end
+		end
+
+		return world
+	end
 
 	local function remoteLevel()
-        local level = nil
-		local world = remoteWorld(Settings.World)
+		local level = nil
+		local world = remoteWorld()
 
-        if world ~= '' and world ~= nil then
-            for i,v in next, require(ReplicatedStorage.Shared.Info.GameWorld.Levels[world])[world] do
+		if world ~= "" and world ~= nil then
+			for i, v in next, require(ReplicatedStorage.Shared.Info.GameWorld.Levels[world])[world] do
 				if v.Name == string.match(Settings.Level, "%- (.+)") then
 					level = tostring(i)
 					break
 				end
-            end
-        end
+			end
+		end
 
-        return level
-    end
+		return level
+	end
 
 	local function extractNum(str)
 		local chapterNum = string.match(str, "Chapter(%d+)")
@@ -283,19 +296,18 @@ xpcall(function()
 	end
 
 	local function getNextStage()
-		local nextChapter = nil
+		local nextStory = nil
 		local nextRangerStage = nil
 
 		for _, v in next, ReplicatedStorage.Shared.Info.GameWorld.Levels:GetChildren() do
 			local data = require(v)[tostring(v)]
 
-			local chapterKeys = {}
-			local rangerKeys = {}
+			local chapterKeys, rangerKeys = {}, {}
 
 			for key in next, data do
-				if string.find(key, "RangerStage") then
+				if key:find("RangerStage") then
 					table.insert(rangerKeys, key)
-				elseif string.find(key, "Chapter") then
+				elseif key:find("Chapter") then
 					table.insert(chapterKeys, key)
 				end
 			end
@@ -303,48 +315,52 @@ xpcall(function()
 			table.sort(chapterKeys, function(a, b)
 				return extractNum(a) < extractNum(b)
 			end)
-
 			table.sort(rangerKeys, function(a, b)
 				return extractNum(a) < extractNum(b)
 			end)
 
-			-- for _, key in next, chapterKeys do
-			-- 	local value = data[key]
-			-- 	local canAccess = value.Requirements and value.Requirements.Required_Levels and clientData.ChapterLevels:FindFirstChild(value.Requirements.Required_Levels)
-			-- 	local completed = clientData.ChapterLevels:FindFirstChild(key)
+			for _, key in next, chapterKeys do
+				local value = data[key]
+				local req = value.Requirements and value.Requirements.Required_Levels
+				local completed = clientData.ChapterLevels:FindFirstChild(key)
 
-			-- 	if canAccess and not completed then
-			-- 		nextChapter = {
-			-- 			World = value.World,
-			-- 			Level = value.Wave
-			-- 		}
-			-- 		break
-			-- 	end
-			-- end
+				if not req then
+					if key == "BizzareRace_Chapter1" then
+						if clientData.ChapterLevels:FindFirstChild("TokyoGhoul_Chapter10") and not completed then
+							nextStory = { World = value.World, Level = key }
+							break
+						end
+					elseif not completed then
+						nextStory = { World = value.World, Level = key }
+						break
+					end
+				else
+					local canAccess = clientData.ChapterLevels:FindFirstChild(req)
+					if canAccess and not completed then
+						nextStory = { World = value.World, Level = key }
+						break
+					end
+				end
+			end
 
 			for _, key in next, rangerKeys do
 				local value = data[key]
-				local canAccess = value.Requirements and value.Requirements.Required_Levels and clientData.ChapterLevels:FindFirstChild(value.Requirements.Required_Levels)
+				local req = value.Requirements and value.Requirements.Required_Levels
+				local canAccess = req and clientData.ChapterLevels:FindFirstChild(req)
 				local onCooldown = clientData.RangerStage:FindFirstChild(key)
 
 				if canAccess and not onCooldown then
-					nextRangerStage = {
-						World = value.World,
-						Level = value.Wave
-					}
+					nextRangerStage = { World = value.World, Level = value.Wave }
 					break
 				end
 			end
 		end
 
-		return {
-			nextChapter = nextChapter,
-			nextRangerStage = nextRangerStage
-		}
+		return { nextStory = nextStory, nextRangerStage = nextRangerStage }
 	end
 
 	local function getPortal()
-		for i,v in next, clientData.Items:GetChildren() do
+		for i, v in next, clientData.Items:GetChildren() do
 			if v.Name:find("Portal") and v:FindFirstChild("Amount") and v.Amount.Value > 0 then
 				return v
 			end
@@ -354,19 +370,21 @@ xpcall(function()
 	end
 
 	local function startGame(mode, world, chapter, difficulty)
+		local playRoomEvent = ReplicatedStorage.Remote.Server.PlayRoom.Event
+
 		if mode == "Challenge" then
-			ReplicatedStorage.Remote.Server.PlayRoom.Event:FireServer("Create", {CreateChallengeRoom = true})
+			playRoomEvent:FireServer("Create", { CreateChallengeRoom = true })
 		else
-			ReplicatedStorage.Remote.Server.PlayRoom.Event:FireServer("Create")
-			ReplicatedStorage.Remote.Server.PlayRoom.Event:FireServer("Change-Mode", {Mode = mode})
-			ReplicatedStorage.Remote.Server.PlayRoom.Event:FireServer("Change-World", {World = world})
-			ReplicatedStorage.Remote.Server.PlayRoom.Event:FireServer("Change-Chapter", {Chapter = chapter})
-			ReplicatedStorage.Remote.Server.PlayRoom.Event:FireServer("Change-Difficulty", {Difficulty = difficulty})
-			ReplicatedStorage.Remote.Server.PlayRoom.Event:FireServer("Submit")
+			playRoomEvent:FireServer("Create")
+			playRoomEvent:FireServer("Change-Mode", { Mode = mode })
+			playRoomEvent:FireServer("Change-World", { World = world })
+			playRoomEvent:FireServer("Change-Chapter", { Chapter = chapter })
+			playRoomEvent:FireServer("Change-Difficulty", { Difficulty = difficulty })
+			playRoomEvent:FireServer("Submit")
 		end
-		
+
 		wait(1)
-		ReplicatedStorage.Remote.Server.PlayRoom.Event:FireServer("Start")
+		playRoomEvent:FireServer("Start")
 	end
 
 	local function unitUpgrade(targetTag)
@@ -399,7 +417,7 @@ xpcall(function()
 	end
 
 	local function traitRankPercent(trait)
-		for i,v in next, traitRanks()["traitRankMap"] do
+		for i, v in next, traitRanks()["traitRankMap"] do
 			if v.Name == trait then
 				return v.Chance
 			end
@@ -407,40 +425,53 @@ xpcall(function()
 		return math.huge
 	end
 
-    local loopStartGame = coroutine.create(function()
-        while wait(1) do
-            if Settings.AutoStart then
+	local loopStartGame = coroutine.create(function()
+		while wait(1) do
+			if Settings.AutoStart then
 				local nextStage = getNextStage()
-				if Settings.FocusRangerStage and nextStage and nextStage.nextRangerStage then
+				if Settings.FocusRangerStage and nextStage.nextRangerStage then
 					local rangerStage = nextStage.nextRangerStage
-					sprint("Teleport to ranger stage World: "..rangerStage.World.." | Level: "..rangerStage.Level)
+					sprint("Teleport to ranger stage World: " .. rangerStage.World .. " | Level: " .. rangerStage.Level)
 					startGame("Ranger Stage", rangerStage.World, rangerStage.Level, "Nightmare")
 				else
 					local portal = getPortal()
 					if Settings.FocusPortal and portal then
-						sprint("Teleport to portal: "..portal.Name)
+						sprint("Teleport to portal: " .. portal.Name)
 						ReplicatedStorage.Remote.Server.Lobby.ItemUse:FireServer(portal)
 						wait(1)
 						ReplicatedStorage.Remote.Server.Lobby.PortalEvent:FireServer("Start")
 					else
-						if Settings.FocusChallenge then
-							sprint("Teleport to challenge")
-							startGame("Challenge")
+						if Settings.AutoNext and nextStage.nextStory then
+							local story = nextStage.nextStory
+							sprint("Tp to story World: " .. story.World .. " | Level: " .. story.Level)
+							startGame("Story", story.World, story.Level, Settings.Difficulty)
 						else
-							local mWorld = remoteWorld()
-							local mLevel = remoteLevel()
-							sprint("Teleport to story World: "..mWorld.." | Level: "..mLevel)
-							startGame("Story", mWorld, mLevel, Settings.Difficulty)
+							if Settings.FocusChallenge then
+								sprint("Teleport to challenge")
+								startGame("Challenge")
+							else
+								local mWorld = remoteWorld()
+								local mLevel = remoteLevel()
+								sprint("Teleport to story World: " .. mWorld .. " | Level: " .. mLevel)
+								if mWorld and mLevel then
+									startGame("Story", mWorld, mLevel, Settings.Difficulty)
+								end
+							end
 						end
 					end
 				end
-            end
-        end
-    end)
+			end
+		end
+	end)
 
 	local loopStartVote = coroutine.create(function()
 		while wait(1) do
-			if Settings.AutoVote and Client.PlayerGui and Client.PlayerGui:FindFirstChild("HUD") and Client.PlayerGui.HUD.InGame.VotePlaying.Visible then
+			if
+				Settings.AutoVote
+				and Client.PlayerGui
+				and Client.PlayerGui:FindFirstChild("HUD")
+				and Client.PlayerGui.HUD.InGame.VotePlaying.Visible
+			then
 				ReplicatedStorage.Remote.Server.OnGame.Voting.VotePlaying:FireServer()
 			end
 		end
@@ -454,13 +485,19 @@ xpcall(function()
 					if slotsMap and #workspace.Agent.Agent:GetChildren() > 0 then
 						for _, slot in next, Settings.UpgradePriorities do
 							local targetTag = slotsMap[slot]
-							if not targetTag then continue end
+							if not targetTag then
+								continue
+							end
 
 							local unit = unitUpgrade(targetTag)
-							if unit and unit:FindFirstChild("Upgrade_Folder") and unit.Upgrade_Folder:FindFirstChild("Level") then
+							if
+								unit
+								and unit:FindFirstChild("Upgrade_Folder")
+								and unit.Upgrade_Folder:FindFirstChild("Level")
+							then
 								local unitLevel = unit.Upgrade_Folder.Level.Value
 								local unitData = require(ReplicatedStorage.Shared.GetData.GetUnitStats)(tostring(unit))
-								
+
 								if unitLevel <= #unitData.Upgrade then
 									local upgradeCost = unitData.Upgrade[unitLevel].Cost
 									local clientYen = Client:FindFirstChild("Yen") and Client.Yen.Value or 0
@@ -491,12 +528,16 @@ xpcall(function()
 							Health = unit.HealthPotential.Value,
 							Speed = unit.SpeedPotential.Value,
 							Range = unit.RangePotential.Value,
-							AttackCooldown = unit.AttackCooldownPotential.Value
+							AttackCooldown = unit.AttackCooldownPotential.Value,
 						}
 						local currentRank = unitStats[Settings.TypeStatReroll]
 
 						if statRankIndex(currentRank) > statRankIndex(Settings.RankStatReroll) then
-							ReplicatedStorage.Remote.Server.Gambling.RerollPotential:FireServer(Settings.TypeStatReroll, unit.Tag.Value, "Selective")
+							ReplicatedStorage.Remote.Server.Gambling.RerollPotential:FireServer(
+								Settings.TypeStatReroll,
+								unit.Tag.Value,
+								"Selective"
+							)
 						end
 					end
 				end
@@ -515,9 +556,14 @@ xpcall(function()
 						local currentTrait = unit.PrimaryTrait.Value
 						local currentRank = traitRankPercent(currentTrait)
 						local targetRank = traitRankPercent(Settings.RankTraitReroll)
-						
+
 						if currentRank > targetRank then
-							ReplicatedStorage.Remote.Server.Gambling.RerollTrait:FireServer(unit, "Reroll", "Main", "Shards")
+							ReplicatedStorage.Remote.Server.Gambling.RerollTrait:FireServer(
+								unit,
+								"Reroll",
+								"Main",
+								"Shards"
+							)
 						end
 					end
 				end
@@ -525,7 +571,7 @@ xpcall(function()
 		end
 	end)
 
-    if not workspace:FindFirstChild("WayPoint") then --[[ Lobby *]]
+	if not workspace:FindFirstChild("WayPoint") then --[[ Lobby *]]
 		Cleaner(loopStartGame)
 		Cleaner(ReplicatedStorage.Remote.Server.PlayRoom.Event.OnClientEvent:Connect(function(player, action)
 			if action == "Start" then
@@ -539,13 +585,13 @@ xpcall(function()
 
 		Cleaner(loopAutoTraitReroll)
 		coroutine.resume(loopAutoTraitReroll)
-    else
-		local countTryVote = 0
+	else
+		-- local countTryVote = 0
 		Cleaner(ReplicatedStorage.Remote.Server.OnGame.Voting.VotePlaying.OnClientEvent:Connect(function()
-			countTryVote += 1
-			if countTryVote == 5 then
-				coroutine.close(loopStartVote)
-			end
+			-- countTryVote += 1
+			-- if countTryVote == 5 then
+			-- 	coroutine.close(loopStartVote)
+			-- end
 
 			if not clientData.Data.AutoPlay.Value then
 				ReplicatedStorage.Remote.Server.Units.AutoPlay:FireServer()
@@ -554,45 +600,72 @@ xpcall(function()
 
 		Cleaner(ReplicatedStorage.Remote.Client.UI.GameEndedUI.OnClientEvent:Connect(function(eventName, result)
 			if eventName == "GameEnded_TextAnimation" then
-				repeat wait() until Client.PlayerGui:FindFirstChild("GameEndedAnimationUI")
+				repeat
+					wait()
+				until Client.PlayerGui:FindFirstChild("GameEndedAnimationUI")
+				wait(5)
 
-				local function getScreenCenter()
-					local viewportSize = workspace.CurrentCamera.ViewportSize
-					return viewportSize.X * 0.1, viewportSize.Y * 0.8
-				end
+				-- local function getScreenCenter()
+				-- 	local viewportSize = workspace.CurrentCamera.ViewportSize
+				-- 	return viewportSize.X * 0.1, viewportSize.Y * 0.8
+				-- end
 
-				local function autoClick()
-					local x, y = getScreenCenter()
-					VirtualInputManager:SendMouseButtonEvent(x, y, 0, true, game, 0)
-					VirtualInputManager:SendMouseButtonEvent(x, y, 0, false, game, 0)
-				end
+				-- local function autoClick()
+				-- 	local x, y = getScreenCenter()
+				-- 	VirtualInputManager:SendMouseButtonEvent(x, y, 0, true, game, 0)
+				-- 	VirtualInputManager:SendMouseButtonEvent(x, y, 0, false, game, 0)
+				-- end
 
-				for i=1,10 do
-					autoClick()
-					wait(0.5)
-				end
+				-- for i = 1, 10 do
+				-- 	autoClick()
+				-- 	wait(0.5)
+				-- end
 
 				local canVoteNext = ReplicatedStorage.Values.Game.VoteNext.VoteEnabled.Value
 				local canVoteRetry = ReplicatedStorage.Values.Game.VoteRetry.VoteEnabled.Value
+				local currentWorld = ReplicatedStorage.Values.Game.World.Value
+				local currentLevel = ReplicatedStorage.Values.Game.Level.Value
+				local currentMode = ReplicatedStorage.Values.Game.Gamemode.Value
 
 				if result == "Won" then
 					sprint("Client won")
 				elseif result == "Defeat" then
 					sprint("Client is defeated")
+
+					if Settings.AutoRetry and canVoteRetry then
+						sprint("Retry story stage")
+						ReplicatedStorage.Remote.Server.OnGame.Voting.VoteRetry:FireServer()
+					else
+						local mWorld = remoteWorld()
+						local mLevel = remoteLevel()
+						sprint("Teleport to story World: " .. mWorld .. " | Level: " .. mLevel)
+						if mWorld and mLevel then
+							startGame("Story", mWorld, mLevel, Settings.Difficulty)
+						end
+					end
+
+					return
 				end
 
 				local nextStage = getNextStage()
+
 				if Settings.FocusRangerStage and nextStage.nextRangerStage then
 					local rangerStage = nextStage.nextRangerStage
-					local currentWorld = ReplicatedStorage.Values.Game.World.Value
-					local currentMode = ReplicatedStorage.Values.Game.Gamemode.Value
-
-					if currentWorld == rangerStage.World and string.find(currentMode, "Ranger") then
-						sprint("Next ranger stage level World: "..rangerStage.World.." | Level: "..rangerStage.Level)
-						ReplicatedStorage.Remote.Server.OnGame.Voting.VoteNext:FireServer()
+					if Settings.AutoNext then
+						if currentWorld == rangerStage.World and canVoteNext then
+							sprint(
+								"Next ranger stage World: " .. rangerStage.World .. " | Level: " .. rangerStage.Level
+							)
+							ReplicatedStorage.Remote.Server.OnGame.Voting.VoteNext:FireServer()
+						else
+							sprint(
+								"Tp to ranger stage World: " .. rangerStage.World .. " | Level: " .. rangerStage.Level
+							)
+							startGame("Ranger Stage", rangerStage.World, rangerStage.Level, "Nightmare")
+						end
 					else
-						sprint("Teleport to ranger stage World: "..rangerStage.World.." | Level: "..rangerStage.Level)
-						startGame("Ranger Stage", rangerStage.World, rangerStage.Level, "Nightmare")
+						sprint("Retry ranger stage")
+						ReplicatedStorage.Remote.Server.OnGame.Voting.VoteRetry:FireServer()
 					end
 				else
 					local portal = getPortal()
@@ -601,33 +674,46 @@ xpcall(function()
 							sprint("Retry portal")
 							ReplicatedStorage.Remote.Server.OnGame.Voting.VoteRetry:FireServer()
 						else
-							sprint("Teleport to portal: "..portal.Name)
+							sprint("Teleport to portal: " .. portal.Name)
 							ReplicatedStorage.Remote.Server.Lobby.ItemUse:FireServer(portal)
 							wait(1)
 							ReplicatedStorage.Remote.Server.Lobby.PortalEvent:FireServer("Start")
 						end
 					else
-						if Settings.FocusChallenge then
-							if canVoteRetry then
-								sprint("Retry challenge")
-								ReplicatedStorage.Remote.Server.OnGame.Voting.VoteRetry:FireServer()
-							else
-								sprint("Teleport to challenge")
-								startGame("Challenge")
-							end
-						else
-							if Settings.AutoNext and canVoteNext then
-								sprint("Next story stage same world")
+						local story = nextStage.nextStory
+						if Settings.AutoNext and story then
+							if currentWorld == story.World and canVoteNext then
+								sprint("Next story World: " .. story.World .. " | Level: " .. story.Level)
 								ReplicatedStorage.Remote.Server.OnGame.Voting.VoteNext:FireServer()
 							else
-								if Settings.AutoRetry and canVoteRetry then
-									sprint("Retry story stage")
+								sprint("Teleport to story World: " .. story.World .. " | Level: " .. story.Level)
+								startGame("Story", story.World, story.Level, Settings.Difficulty)
+							end
+						else
+							if Settings.FocusChallenge then
+								if canVoteRetry then
+									sprint("Retry challenge")
 									ReplicatedStorage.Remote.Server.OnGame.Voting.VoteRetry:FireServer()
 								else
-									local mWorld = remoteWorld()
-									local mLevel = remoteLevel()
-									sprint("Teleport to story World: "..mWorld.." | Level: "..mLevel)
-									startGame("Story", mWorld, mLevel, Settings.Difficulty)
+									sprint("Teleport to challenge")
+									startGame("Challenge")
+								end
+							else
+								local mWorld = remoteWorld()
+								local mLevel = remoteLevel()
+								if mWorld and mLevel then
+									if
+										currentWorld == mWorld
+										and currentLevel == mLevel
+										and currentMode:find("Story")
+										and canVoteRetry
+									then
+										sprint("Retry selected story")
+										ReplicatedStorage.Remote.Server.OnGame.Voting.VoteRetry:FireServer()
+									else
+										sprint("Teleport to story World: " .. mWorld .. " | Level: " .. mLevel)
+										startGame("Story", mWorld, mLevel, Settings.Difficulty)
+									end
 								end
 							end
 						end
@@ -639,24 +725,36 @@ xpcall(function()
 			end
 		end))
 
-		Cleaner(loopStartVote)
-		coroutine.resume(loopStartVote)
+		-- Cleaner(loopStartVote)
+		-- coroutine.resume(loopStartVote)
+
+		local Setting_Event = ReplicatedStorage.Remote.Server.Settings.Setting_Event
+		if Settings.AutoStart then
+			Setting_Event:FireServer("Auto Vote Start", true)
+		else
+			Setting_Event:FireServer("Auto Vote Start", false)
+		end
+		Setting_Event:FireServer("Auto Set Max Speed", true)
+		Setting_Event:FireServer("DisibleGachaChat", true)
+		Setting_Event:FireServer("Cutscene Disabled", true)
 
 		Cleaner(loopAutoUpgrade)
 		coroutine.resume(loopAutoUpgrade)
-    end
+	end
 
-    --[[ UI *]]
-    local worlds, levels, difficulties, labelPriority, upgradePriorities, unitSlotStatReroll
+	--[[ UI *]]
+	local worldsGUI, levelsGUI, diffGUI, labelPriority, upgradePriorities, unitSlotStatReroll
 	local priorityOrder = {}
 	local selectedSlot = {}
-	local loadoutSlots = {} do
-		for i=1,6 do
-			table.insert(loadoutSlots, "Slot"..i)
+	local loadoutSlots = {}
+	do
+		for i = 1, 6 do
+			table.insert(loadoutSlots, "Slot" .. i)
 		end
 	end
-	local traitRankDropdown = {} do
-		for i,v in next, traitRanks()["traitRankMap"] do
+	local traitRankDropdown = {}
+	do
+		for i, v in next, traitRanks()["traitRankMap"] do
 			table.insert(traitRankDropdown, v.Name)
 		end
 	end
@@ -700,72 +798,71 @@ xpcall(function()
 
 	local function dropdownWorlds()
 		local worlds = {}
-		local blacklist = {}
+		local invalid = {}
 
-		for i,v in next, dataWorlds() do
-			if v.Requirements and v.Requirements.Required_Levels and not clientData.ChapterLevels:FindFirstChild(v.Requirements.Required_Levels) then
-				blacklist[#blacklist+1] = v.Name
+		for i, v in next, dataWorlds() do
+			local req = v.Requirements and v.Requirements.Required_Levels
+			if req and not clientData.ChapterLevels:FindFirstChild(req) then
+				table.insert(invalid, v.Name)
 			end
 
-			worlds[#worlds+1] = v.Name
+			table.insert(worlds, v.Name)
 		end
 
 		return {
-			validLevels = worlds,
-			invalidLevels = blacklist,
+			allWorlds = worlds,
+			invalidWorlds = invalid,
 		}
 	end
 
-    local function dropdownLevels()
-        local levels = {}
-        local blacklist = {}
-		local world = remoteWorld(Settings.World)
+	local function dropdownLevels()
+		local levels = {}
+		local invalid = {}
+		local world = remoteWorld()
 
-        if world ~= '' and world ~= nil then
-            for i,v in next, require(ReplicatedStorage.Shared.Info.GameWorld.Levels[world])[world] do
+		if world ~= "" and world ~= nil then
+			for i, v in next, require(ReplicatedStorage.Shared.Info.GameWorld.Levels[world])[world] do
 				if string.find(i, "Chapter") then
-					if v.Requirements and v.Requirements.Required_Levels and not clientData.ChapterLevels:FindFirstChild(v.Requirements.Required_Levels) then
-						table.insert(blacklist, `{v.World} - {v.Name}`)
-					else
-						table.insert(levels, `{v.World} - {v.Name}`)
+					local req = v.Requirements and v.Requirements.Required_Levels
+					if req and not clientData.ChapterLevels:FindFirstChild(req) then
+						table.insert(invalid, v.World .. " - " .. v.Name)
 					end
+
+					table.insert(levels, v.World .. " - " .. v.Name)
 				end
-            end
-        end
+			end
+		end
 
-		table.sort(levels, function(a, b)
-			local aNum = tonumber(string.match(a, "%d+")) or 0
-			local bNum = tonumber(string.match(b, "%d+")) or 0
+		local function sortByNum(a, b)
+			local aNum = tonumber(a:match("%d+")) or 0
+			local bNum = tonumber(b:match("%d+")) or 0
 			return aNum < bNum
-		end)
+		end
 
-		table.sort(blacklist, function(a, b)
-			local aNum = tonumber(string.match(a, "%d+")) or 0
-			local bNum = tonumber(string.match(b, "%d+")) or 0
-			return aNum < bNum
-		end)
+		table.sort(levels, sortByNum)
+		table.sort(invalid, sortByNum)
 
 		return {
-			validLevels = levels,
-			invalidLevels = blacklist,
+			allLevels = levels,
+			invalidLevels = invalid,
 		}
-    end
+	end
 
 	local function updateDropdownUnitSlotStatReroll()
 		Settings.UnitSlotStatReroll = ""
 		saveSettings()
 
 		unitSlotStatReroll:SetValue(nil)
-		if Settings.RankStatReroll ~= '' and Settings.TypeStatReroll ~= '' then
+		if Settings.RankStatReroll ~= "" and Settings.TypeStatReroll ~= "" then
 			unitSlotStatReroll:SetDisabled(false)
 		else
 			unitSlotStatReroll:SetDisabled(true)
 		end
 	end
 
-    local Repository = "https://raw.githubusercontent.com/deividcomsono/Obsidian/refs/heads/main/"
+	local Repository = "https://raw.githubusercontent.com/deividcomsono/Obsidian/refs/heads/main/"
 	local Library = loadstring(game:HttpGet(Repository .. "Library.lua"))()
-    Cleaner.GetCleanEvent():Connect(function()
+	Cleaner.GetCleanEvent():Connect(function()
 		Library:Unload()
 	end)
 
@@ -773,8 +870,8 @@ xpcall(function()
 		Title = "Anime Rangers X",
 		Center = true,
 		AutoShow = true,
-        ShowCustomCursor = false,
-        ToggleKeybind = Enum.KeyCode.RightControl,
+		ShowCustomCursor = false,
+		ToggleKeybind = Enum.KeyCode.RightControl,
 		Footer = "Version: " .. Version .. " | " .. SubVersion,
 		Size = UDim2.fromOffset(700, 400),
 	})
@@ -797,11 +894,12 @@ xpcall(function()
 		TraitReroll = Tabs.Utilities:AddRightGroupbox("Trait Reroll"),
 	}
 
-	worlds = Groups.Map:AddDropdown("Worlds", {
+	local dropWorlds = dropdownWorlds()
+	worldsGUI = Groups.Map:AddDropdown("Worlds", {
 		Text = "Worlds",
 		Default = Settings.World,
-		Values = dropdownWorlds()['validLevels'],
-		DisabledValues = dropdownWorlds()['invalidLevels'],
+		Values = dropWorlds["allWorlds"],
+		DisabledValues = dropWorlds["invalidWorlds"],
 		Tooltip = "Select a map",
 		Searchable = true,
 		Callback = function(value)
@@ -809,17 +907,19 @@ xpcall(function()
 			Settings.Level = ""
 			saveSettings()
 
-			levels:SetValues(dropdownLevels()['validLevels'])
-			levels:SetDisabledValues(dropdownLevels()['invalidLevels'])
-			levels:SetValue(nil)
+			local dropLevels = dropdownLevels()
+			levelsGUI:SetValues(dropLevels["allLevels"])
+			levelsGUI:SetDisabledValues(dropLevels["invalidLevels"])
+			levelsGUI:SetValue(nil)
 		end,
 	})
-	
-	levels = Groups.Map:AddDropdown("Levels", {
+
+	local dropLevels = dropdownLevels()
+	levelsGUI = Groups.Map:AddDropdown("Levels", {
 		Text = "Levels",
 		Default = Settings.Level,
-		Values = dropdownLevels()['validLevels'],
-		DisabledValues = dropdownLevels()['invalidLevels'],
+		Values = dropLevels["allLevels"],
+		DisabledValues = dropLevels["invalidLevels"],
 		Tooltip = "Select a world first to load levels",
 		Searchable = true,
 		Callback = function(value)
@@ -828,10 +928,10 @@ xpcall(function()
 		end,
 	})
 
-	difficulties = Groups.Map:AddDropdown("Difficulties", {
+	diffGUI = Groups.Map:AddDropdown("Difficulties", {
 		Text = "Difficulties",
 		Default = Settings.Difficulty,
-		Values = {"Normal", "Hard", "Nightmare"},
+		Values = { "Normal", "Hard", "Nightmare" },
 		Tooltip = "Select a difficulty",
 		Searchable = true,
 		Callback = function(value)
@@ -912,7 +1012,7 @@ xpcall(function()
 
 	labelPriority = Groups.UpgradeUnits:AddLabel({
 		Text = "No priority slot selected",
-		DoesWrap = true
+		DoesWrap = true,
 	})
 
 	upgradePriorities = Groups.UpgradeUnits:AddDropdown("upgradePriorities", {
@@ -929,7 +1029,7 @@ xpcall(function()
 				updateDropdownPriorities()
 				upgradePriorities:SetValue(nil)
 			end
-		end
+		end,
 	})
 	updateDropdownPriorities()
 
@@ -955,7 +1055,7 @@ xpcall(function()
 	})
 
 	Groups.StatReroll:AddDropdown("TypeStatReroll", {
-		Values = {"Damage", "Health", "Speed", "Range", "AttackCooldown"},
+		Values = { "Damage", "Health", "Speed", "Range", "AttackCooldown" },
 		Default = Settings.TypeStatReroll,
 		Text = "Select Focus Stat",
 		Tooltip = "Select a stat to focus on rerolling",
@@ -964,7 +1064,7 @@ xpcall(function()
 			Settings.TypeStatReroll = value
 			saveSettings()
 			updateDropdownUnitSlotStatReroll()
-		end
+		end,
 	})
 
 	Groups.StatReroll:AddDropdown("RankStatReroll", {
@@ -977,7 +1077,7 @@ xpcall(function()
 			Settings.RankStatReroll = value
 			saveSettings()
 			updateDropdownUnitSlotStatReroll()
-		end
+		end,
 	})
 
 	unitSlotStatReroll = Groups.StatReroll:AddDropdown("UnitSlotStatReroll", {
@@ -989,7 +1089,7 @@ xpcall(function()
 		Callback = function(value)
 			Settings.UnitSlotStatReroll = value
 			saveSettings()
-		end
+		end,
 	})
 	updateDropdownUnitSlotStatReroll()
 
@@ -1005,7 +1105,7 @@ xpcall(function()
 
 	Groups.TraitReroll:AddLabel({
 		Text = table.concat(traitRanks()["traitRankText"], "\n"),
-		DoesWrap = true
+		DoesWrap = true,
 	})
 
 	Groups.TraitReroll:AddDropdown("RankTraitReroll", {
@@ -1017,7 +1117,7 @@ xpcall(function()
 		Callback = function(value)
 			Settings.RankTraitReroll = value
 			saveSettings()
-		end
+		end,
 	})
 
 	Groups.TraitReroll:AddDropdown("UnitSlotTraitReroll", {
@@ -1029,7 +1129,7 @@ xpcall(function()
 		Callback = function(value)
 			Settings.UnitSlotTraitReroll = value
 			saveSettings()
-		end
+		end,
 	})
 
 	Groups.TraitReroll:AddToggle("AutoTraitReroll", {

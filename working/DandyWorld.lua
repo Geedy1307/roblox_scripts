@@ -15,7 +15,6 @@ local defaultSettings = {
 	AutoFarm = false,
 	SpeedBoost = 20,
 	KeySpeedBoost = "Q",
-	KeyMacroBassie = "Z",
 }
 local HttpS = game:GetService("HttpService")
 local FileName = "dandys_world(ID_" .. game:GetService("Players").LocalPlayer.UserId .. ").json"
@@ -250,7 +249,6 @@ xpcall(function()
 		end
 	end
 
-	--[[ Bassie Macro ]]
 	local function collectClosestItems(useItem)
 		useItem = useItem or false
 
@@ -275,44 +273,46 @@ xpcall(function()
 		end
 	end
 
-	local function bassieMacro()
-		ReplicatedStorage.Events.AbilityEvent:InvokeServer(Character, clientRoot.CFrame, false)
-		wait()
-		ReplicatedStorage.Events.ItemEvent:InvokeServer(Character, clientInventory.Slot1)
-		wait(0.1)
-		collectClosestItems()
-	end
+	local function autoSkillCheckLine()
+		local marker = skillCheckFrame:WaitForChild("Marker")
+		local gold = skillCheckFrame:WaitForChild("GoldArea")
 
-	local function isWithinGoldArea(mark, area)
-		local pos, size = area.AbsolutePosition, area.AbsoluteSize
-		local markerX = mark.AbsolutePosition.X
-		return markerX >= pos.X and markerX <= pos.X + size.X + 5
-	end
-
-	local function tryAutoSkillCheck()
-		if skillCheckFrame.Visible and Settings.AutoSkillCheck then
-			local marker = skillCheckFrame:WaitForChild("Marker")
-			local goldArea = skillCheckFrame:WaitForChild("GoldArea")
-
-			if marker and goldArea and isWithinGoldArea(marker, goldArea) then
-				VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
-			end
+		for _, obj in next, { skillCheckFrame, marker, gold } do
+			obj.Changed:Connect(function(prop)
+				if prop == "Visible" or prop == "AbsolutePosition" or prop == "AbsoluteSize" then
+					if skillCheckFrame.Visible and Settings.AutoSkillCheck then
+						local pos, size = gold.AbsolutePosition, gold.AbsoluteSize
+						local mx = marker.AbsolutePosition.X
+						if mx >= pos.X and mx <= pos.X + size.X + 2 then
+							VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
+						end
+					end
+				end
+			end)
 		end
 	end
+	autoSkillCheckLine()
 
-	local function onRelevantChange(property)
-		if property == "Visible" or property == "AbsolutePosition" or property == "AbsoluteSize" then
-			tryAutoSkillCheck()
+	playerGui.ChildAdded:Connect(function(gui)
+		if gui.Name ~= "CircleSkillCheckGui" or not Settings.AutoSkillCheck then
+			return
 		end
-	end
 
-	local function bindChanges(instance)
-		instance.Changed:Connect(onRelevantChange)
-	end
+		local frame = gui:WaitForChild("SkillCheckFrame")
+		local container = frame:WaitForChild("Container")
+		local shrinking = container:WaitForChild("ShrinkingCircle")
+		local yellow = container:WaitForChild("YellowCircle")
 
-	bindChanges(skillCheckFrame)
-	bindChanges(skillCheckFrame:WaitForChild("Marker"))
-	bindChanges(skillCheckFrame:WaitForChild("GoldArea"))
+		for _, obj in next, { frame, shrinking, yellow } do
+			obj.Changed:Connect(function(prop)
+				if prop == "Visible" or prop == "AbsoluteSize" then
+					if frame.Visible and shrinking.AbsoluteSize.X <= yellow.AbsoluteSize.X then
+						VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
+					end
+				end
+			end)
+		end
+	end)
 
 	--[[ ESP ]]
 	local function addESP(target, fillcolor)
@@ -373,13 +373,6 @@ xpcall(function()
 		end
 	end
 
-	--[[ AutoFarm ]]
-	local function backToElevator()
-		firetouchinterest(clientRoot, baseTrigger, 0)
-		wait(0.1)
-		firetouchinterest(clientRoot, baseTrigger, 1)
-	end
-
 	local function specialAlerts()
 		local danger = nil
 
@@ -401,18 +394,25 @@ xpcall(function()
 		return danger
 	end
 
-	local function monstersAlert()
-		if not currentRoom:FindFirstChildWhichIsA("Model") then
-			return
+	local function monstersFolder()
+		local model = currentRoom:FindFirstChildWhichIsA("Model")
+		if not model then
+			return nil
 		end
 
-		for _, folder in next, currentRoom:FindFirstChildWhichIsA("Model"):GetChildren() do
-			if folder:IsA("Folder") and folder.Name == "Monsters" then
-				for _, monster in next, folder:GetChildren() do
-					if monster:FindFirstChild("ChasingValue") and monster.ChasingValue.Value == Character then
-						return true
-					end
-				end
+		return model:FindFirstChild("Monsters")
+	end
+
+	local function monstersAlert()
+		local folder = monstersFolder()
+		if not folder then
+			return false
+		end
+
+		for _, monster in next, folder:GetChildren() do
+			local chasing = monster:FindFirstChild("ChasingValue")
+			if chasing and chasing.Value == Character then
+				return true
 			end
 		end
 
@@ -421,20 +421,21 @@ xpcall(function()
 
 	local function monstersClose(distance)
 		distance = distance or 20
-		local blockList = { "RazzleDazzleMonster", "RodgerMonster" }
+		local blackList = {
+			RazzleDazzleMonster = true,
+			RodgerMonster = true,
+		}
 
-		if not currentRoom:FindFirstChildWhichIsA("Model") then
-			return
+		local folder = monstersFolder()
+		if not folder then
+			return false
 		end
 
-		for _, folder in next, currentRoom:FindFirstChildWhichIsA("Model"):GetChildren() do
-			if folder:IsA("Folder") and folder.Name == "Monsters" then
-				for _, monster in next, folder:GetChildren() do
-					if not table.find(blockList, monster.Name) and monster:FindFirstChild("HumanoidRootPart") then
-						if (clientRoot.Position - monster.HumanoidRootPart.Position).magnitude <= distance then
-							return true
-						end
-					end
+		for _, monster in next, folder:GetChildren() do
+			if not blackList[monster.Name] then
+				local rootPart = monster:FindFirstChild("HumanoidRootPart")
+				if rootPart and (clientRoot.Position - rootPart.Position).magnitude <= distance then
+					return true
 				end
 			end
 		end
@@ -449,9 +450,9 @@ xpcall(function()
 		end
 
 		local distance = (clientRoot.Position - target.Position).magnitude
-		local speedFactor = (60 * wait())
+		local speedFactor = 60 * wait()
 		local estimatedTime = speedFactor / distance
-		local adjustedLerpAlpha = math.min(estimatedTime, 1)
+		local alpha = math.clamp(estimatedTime, 0, 1)
 
 		if not clientRoot:FindFirstChild("AntiGravity") then
 			bodyPosition = Instance.new("BodyPosition")
@@ -460,21 +461,21 @@ xpcall(function()
 			bodyPosition.P = 20000
 			bodyPosition.D = 1500
 			bodyPosition.Parent = clientRoot
+		else
+			bodyPosition = clientRoot:FindFirstChild("AntiGravity")
 		end
 
-		if distance <= 20 and not monstersAlert() and not monstersClose(50) then
-			clientRoot.CFrame = clientRoot.CFrame:lerp(CFrame.new(target.Position), adjustedLerpAlpha)
+		local isAlert = monstersAlert()
+		local isClose50 = monstersClose(50)
+
+		if distance <= 20 and not isAlert and not isClose50 then
+			clientRoot.CFrame = clientRoot.CFrame:lerp(CFrame.new(target.Position), alpha)
 			bodyPosition.Position = Vector3.new(clientRoot.Position.X, target.Position.Y, clientRoot.Position.Z)
 		else
-			if distance <= 20 and (monstersClose(20) or monstersAlert()) then
-				clientRoot.CFrame = CFrame.new(clientRoot.Position.X, (target.Position.Y - 2.25), clientRoot.Position.Z)
-			end
+			local targetY = target.Position.Y - 2
 
-			clientRoot.CFrame = clientRoot.CFrame:lerp(
-				CFrame.new(target.Position.X, (target.Position.Y - 2.25), target.Position.Z),
-				adjustedLerpAlpha
-			)
-			bodyPosition.Position = Vector3.new(clientRoot.Position.X, target.Position.Y - 2.25, clientRoot.Position.Z)
+			clientRoot.CFrame = clientRoot.CFrame:lerp(CFrame.new(target.Position.X, targetY, target.Position.Z), alpha)
+			bodyPosition.Position = Vector3.new(clientRoot.Position.X, targetY, clientRoot.Position.Z)
 		end
 	end
 
@@ -533,7 +534,7 @@ xpcall(function()
 
 	local function bestCard()
 		for i, v in next, roundInfo.CardVote:GetChildren() do
-			if v and (v.Name:find("Heal") or v.Name:find("Machine")) then
+			if v and (v.Name:find("Machine") or v.Name:find("Heal") or v.Name:find("Dyle")) then
 				return v
 			end
 		end
@@ -559,6 +560,30 @@ xpcall(function()
 		end
 	end
 
+	local function generatorData()
+		local generator = generators()
+		if not generator then
+			return nil
+		end
+
+		local origin = generator:FindFirstChild("Origin")
+		local stats = generator:FindFirstChild("Stats")
+		if not origin or not stats then
+			return nil
+		end
+
+		local completed = stats:FindFirstChild("Completed")
+		local stop = stats:FindFirstChild("StopInteracting")
+
+		return {
+			model = generator,
+			origin = origin,
+			stats = stats,
+			completed = completed,
+			stop = stop,
+		}
+	end
+
 	local loopApplyESP = coroutine.create(function()
 		while wait(1) do
 			applyESP()
@@ -571,59 +596,66 @@ xpcall(function()
 
 		while wait() do
 			if not Settings.AutoFarm then
-				continue
+				return
 			end
 
-			local generator = generators()
+			local generator = generatorData()
 			local inElevator = clientStats:FindFirstChild("InElevator") and clientStats.InElevator.Value
 
 			if generator then
-				local generatorOrigin = generator:FindFirstChild("Origin")
-				local generatorStats = generator:FindFirstChild("Stats")
-				local generatorStats_Completed = generatorStats:FindFirstChild("Completed")
-				local generatorStats_StopInteracting = generatorStats:FindFirstChild("StopInteracting")
+				if inElevator then
+					if not debounce then
+						repeat
+							wait()
+							clientRoot.CFrame = CFrame.new(clientRoot.Position.X, currentHeight, clientRoot.Position.Z)
+						until not menuGui.Message.Visible or menuGui.Message.Text:find("Elevator closes in")
 
-				if inElevator and not debounce then
-					repeat
-						wait()
-						clientRoot.CFrame = CFrame.new(clientRoot.Position.X, currentHeight, clientRoot.Position.Z)
-					until not menuGui.Message.Visible or menuGui.Message.Text:find("Elevator closes in")
-
+						repeat
+							wait()
+							if not Settings.AutoFarm then
+								break
+							end
+							lerpTo(elevator.ForceZone)
+						until (clientRoot.Position - elevator.ForceZone.Position).magnitude <= 3
+						generator = generatorData()
+						debounce = true
+					end
+				else
 					repeat
 						wait()
 						if not Settings.AutoFarm then
 							break
 						end
-						lerpTo(elevator.ForceZone)
-					until (clientRoot.Position - elevator.ForceZone.Position).magnitude <= 3
 
-					generator = generators()
-					if generator then
-						generatorOrigin = generator:FindFirstChild("Origin")
-						generatorStats = generator:FindFirstChild("Stats")
-						generatorStats_Completed = generatorStats:FindFirstChild("Completed")
-						generatorStats_StopInteracting = generatorStats:FindFirstChild("StopInteracting")
-					end
-					debounce = true
-				else
-					repeat
-						wait()
-						if not Settings.AutoFarm or specialAlerts() then
-							break
+						if specialAlerts() then
+							generator = generatorData()
+							if not generator then
+								break
+							end
 						end
 
-						if monstersClose(20) or monstersAlert() then
-							generatorStats_StopInteracting:FireServer("Stop")
+						local isAlert = monstersAlert()
+						local isClose20 = monstersClose(20)
+						local isClose50 = monstersClose(50)
+
+						if isClose20 or isAlert then
+							generator.stop:FireServer("Stop")
 						end
 
-						lerpTo(generatorOrigin)
-						if (clientRoot.Position - generatorOrigin.Position).magnitude <= 2 then
-							interactPrompt(generator)
+						if generator.origin then
+							lerpTo(generator.origin)
+							if
+								not isClose50
+								and not isAlert
+								and (clientRoot.Position - generator.origin.Position).magnitude <= 2
+							then
+								interactPrompt(generator.model)
+							end
 						end
-					until generatorStats_Completed.Value
-					if generatorOrigin then
+					until generator.completed and generator.completed.Value
+					if generator and generator.origin then
 						clientRoot.CFrame =
-							CFrame.new(clientRoot.Position.X, generatorOrigin.Position.Y - 2.25, clientRoot.Position.Z)
+							CFrame.new(clientRoot.Position.X, generator.origin.Position.Y - 2.25, clientRoot.Position.Z)
 					end
 				end
 			else
@@ -636,36 +668,56 @@ xpcall(function()
 
 						clientRoot.CFrame = CFrame.new(clientRoot.Position.X, currentHeight, clientRoot.Position.Z)
 						ReplicatedStorage.Events.CardVoteEvent:FireServer(bestCard())
-					until generators()
+					until generatorData()
 					debounce = false
-				else
-					if specialAlerts() then
-						repeat
-							wait()
-							if not Settings.AutoFarm then
-								break
-							end
+				elseif specialAlerts() then
+					repeat
+						wait()
+						if not Settings.AutoFarm then
+							break
+						end
 
-							if (clientRoot.Position - elevator.Base.Position).magnitude > 30 then
-								backToElevator()
-							else
-								lerpTo(elevator.Base)
-							end
-						until not specialAlerts()
-					else
-						if roundInfo.ElevatorPrompt.ClaimIcon.Enabled then
-							repeat
-								wait()
-								if not Settings.AutoFarm then
-									break
-								end
+						lerpTo(elevator.Base)
+					until not specialAlerts()
+				elseif roundInfo.ElevatorPrompt.ClaimIcon.Enabled then
+					repeat
+						wait()
+						if not Settings.AutoFarm then
+							break
+						end
 
-								if (clientRoot.Position - elevator.Base.Position).magnitude > 30 then
-									backToElevator()
-								else
-									lerpTo(elevator.Base)
-								end
-							until not roundInfo.ElevatorPrompt.ClaimIcon.Enabled
+						lerpTo(elevator.Base)
+					until not roundInfo.ElevatorPrompt.ClaimIcon.Enabled
+				end
+			end
+		end
+	end)
+
+	local loopAutoSides = coroutine.create(function()
+		while wait() do
+			if not Settings.AutoFarm then
+				return
+			end
+
+			collectClosestItems(true)
+			stateCollide(currentRoom, false)
+			stateCollide(elevators, false)
+
+			if currentRoom:FindFirstChildWhichIsA("Model") then
+				local model = currentRoom:FindFirstChildWhichIsA("Model")
+				local monsters = model:FindFirstChild("Monsters")
+				local generators = model:FindFirstChild("Generators")
+
+				for _, obj in next, model:GetDescendants() do
+					if
+						obj:IsA("BasePart")
+						and not obj:IsDescendantOf(monsters)
+						and not obj:IsDescendantOf(generators)
+						and obj.Transparency == 0
+					then
+						local topModel = obj:FindFirstAncestorOfClass("Model")
+						if topModel and not topModel:FindFirstChild("HumanoidRootPart") then
+							obj.Transparency = 1
 						end
 					end
 				end
@@ -673,41 +725,12 @@ xpcall(function()
 		end
 	end)
 
-	local loopAutoItems = coroutine.create(function()
-		while wait() do
-			if not Settings.AutoFarm then
-				continue
-			end
-
-			collectClosestItems(true)
-			stateCollide(currentRoom, false)
-			stateCollide(elevators, false)
-
-			-- if currentRoom:FindFirstChildWhichIsA("Model") then
-			-- 	local model = currentRoom:FindFirstChildWhichIsA("Model")
-			-- 	local monsters = model:FindFirstChild("Monsters")
-			-- 	local generators = model:FindFirstChild("Generators")
-
-			-- 	for _, obj in next, model:GetDescendants() do
-			-- 		if
-			-- 			obj:IsA("BasePart")
-			-- 			and not obj:IsDescendantOf(monsters)
-			-- 			and not obj:IsDescendantOf(generators)
-			-- 			and obj.Transparency == 0
-			-- 		then
-			-- 			obj.Transparency = 1
-			-- 		end
-			-- 	end
-			-- end
-		end
-	end)
-
 	Cleaner(loopApplyESP)
 	coroutine.resume(loopApplyESP)
 	Cleaner(loopAutoFarm)
 	coroutine.resume(loopAutoFarm)
-	Cleaner(loopAutoItems)
-	coroutine.resume(loopAutoItems)
+	Cleaner(loopAutoSides)
+	coroutine.resume(loopAutoSides)
 
 	--[[ UI *]]
 	local Library = loadstring(
@@ -781,23 +804,6 @@ xpcall(function()
 		end,
 	})
 
-	Groups.Client:AddLabel("Macro Bassie Bind"):AddKeyPicker("MacroBassieBoost", {
-		Default = Settings.KeyMacroBassie,
-		Text = "Macro Bassie Boost",
-		Mode = "Toggle", -- Options: "Toggle", "Hold", "Always"
-		SyncToggleState = false,
-		Callback = function()
-			bassieMacro()
-		end,
-		Clicked = function()
-			bassieMacro()
-		end,
-		ChangedCallback = function(key)
-			Settings.KeyMacroBassie = tostring(key)
-			saveSettings()
-		end,
-	})
-
 	Groups.Auto:AddToggle("AutoGeneratorCheck", {
 		Text = "Auto Generator Check",
 		Default = Settings.AutoSkillCheck,
@@ -818,8 +824,6 @@ xpcall(function()
 
 			if not Settings.AutoFarm and clientRoot:FindFirstChild("AntiGravity") then
 				clientRoot.AntiGravity:Remove()
-				wait(0.1)
-				backToElevator()
 				wait(0.1)
 				stateCollide(currentRoom, true)
 				stateCollide(elevators, true)
