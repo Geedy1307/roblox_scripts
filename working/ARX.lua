@@ -328,25 +328,28 @@ xpcall(function()
 			end)
 
 			for _, key in next, chapterKeys do
-				if not clientData.ChapterLevels:FindFirstChild(tostring(key)) then
+				if not clientData.ChapterLevels:FindFirstChild(key) then
 					local value = data[key]
-					local req = value.Requirements and value.Requirements.Required_Levels
 
-					if req then
-						local canAccess = clientData.ChapterLevels:FindFirstChild(req)
-						if canAccess then
-							nextStory = value
-							break
-						end
-					else
-						if key == "BizzareRace_Chapter1" then
-							if clientData.ChapterLevels:FindFirstChild("TokyoGhoul_Chapter10") then
+					if not value.Name:find("Act") then
+						local req = value.Requirements and value.Requirements.Required_Levels
+
+						if req then
+							local canAccess = clientData.ChapterLevels:FindFirstChild(req)
+							if canAccess then
 								nextStory = value
 								break
 							end
 						else
-							nextStory = value
-							break
+							if key == "BizzareRace_Chapter1" then
+								if clientData.ChapterLevels:FindFirstChild("TokyoGhoul_Chapter10") then
+									nextStory = value
+									break
+								end
+							else
+								nextStory = value
+								break
+							end
 						end
 					end
 				end
@@ -648,52 +651,51 @@ xpcall(function()
 				local canVoteRetry = ReplicatedStorage.Values.Game.VoteRetry.VoteEnabled.Value
 				local currentWorld = ReplicatedStorage.Values.Game.World.Value
 				local currentLevel = ReplicatedStorage.Values.Game.Level.Value
-				local currentMode = ReplicatedStorage.Values.Game.Gamemode.Value
+				local currentMode = ReplicatedStorage.Values.Game.Gamemode.Value --[[ Portal, Ranger Stage, Story, Raids Stage ]]
 
 				if result == "Won" then
-					notify("Client won")
+					notify("Client won", true)
 				elseif result == "Defeat" then
 					notify("Client is defeated")
 				end
 
-				local nextStage = getNextStage()
-
-				if Settings.FocusRangerStage and nextStage.nextRangerStage then
-					local rs = nextStage.nextRangerStage
-					local rsWorld = rs.World
-					local rsWave = rs.Wave
-
-					if Settings.AutoNext then
-						if currentWorld == rsWorld and canVoteNext then
-							notify("Next Ranger Stage World: " .. rsWorld .. " | Level: " .. rsWave, true)
-							ReplicatedStorage.Remote.Server.OnGame.Voting.VoteNext:FireServer()
-						else
-							notify("Tp to Ranger Stage World: " .. rsWorld .. " | Level: " .. rsWave, true)
-							startGame("Ranger Stage", rsWorld, rsWave, "Nightmare")
-						end
-					else
-						notify("Retry Ranger Stage", true)
+				local portal = getPortal()
+				if Settings.FocusPortal and portal then
+					if canVoteRetry and currentMode:find("Portal") then
+						notify("Retry portal", true)
 						ReplicatedStorage.Remote.Server.OnGame.Voting.VoteRetry:FireServer()
+					else
+						notify("Teleport to portal: " .. portal.Name, true)
+						ReplicatedStorage.Remote.Server.Lobby.ItemUse:FireServer(portal)
+						wait(1)
+						ReplicatedStorage.Remote.Server.Lobby.PortalEvent:FireServer("Start")
 					end
 				else
-					local portal = getPortal()
+					local nextStage = getNextStage()
 
-					if Settings.FocusPortal and portal then
-						if canVoteRetry then
-							notify("Retry portal", true)
-							ReplicatedStorage.Remote.Server.OnGame.Voting.VoteRetry:FireServer()
+					local rs = nextStage.nextRangerStage
+					if Settings.FocusRangerStage and rs then
+						local rsWorld = rs.World
+						local rsWave = rs.Wave
+
+						if Settings.AutoNext then
+							if currentWorld == rsWorld and canVoteNext then
+								notify("Next Ranger Stage World: " .. rsWorld .. " | Level: " .. rsWave, true)
+								ReplicatedStorage.Remote.Server.OnGame.Voting.VoteNext:FireServer()
+							else
+								notify("Teleport to Ranger Stage World: " .. rsWorld .. " | Level: " .. rsWave, true)
+								startGame("Ranger Stage", rsWorld, rsWave, "Nightmare")
+							end
 						else
-							notify("Teleport to portal: " .. portal.Name, true)
-							ReplicatedStorage.Remote.Server.Lobby.ItemUse:FireServer(portal)
-							wait(1)
-							ReplicatedStorage.Remote.Server.Lobby.PortalEvent:FireServer("Start")
+							notify("Retry Ranger Stage", true)
+							ReplicatedStorage.Remote.Server.OnGame.Voting.VoteRetry:FireServer()
 						end
 					else
 						local story = nextStage.nextStory
-						local storyWorld = story.World
-						local storyWave = story.Wave
-
 						if Settings.AutoNext and story then
+							local storyWorld = story.World
+							local storyWave = story.Wave
+
 							if currentWorld == storyWorld and canVoteNext then
 								notify("Next story World: " .. storyWorld .. " | Level: " .. storyWave, true)
 								ReplicatedStorage.Remote.Server.OnGame.Voting.VoteNext:FireServer()
