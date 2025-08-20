@@ -320,25 +320,26 @@ xpcall(function()
 			end)
 
 			for _, key in next, chapterKeys do
-				local value = data[key]
-				local req = value.Requirements and value.Requirements.Required_Levels
-				local completed = clientData.ChapterLevels:FindFirstChild(key)
+				if not clientData.ChapterLevels:FindFirstChild(tostring(key)) then
+					local value = data[key]
+					local req = value.Requirements and value.Requirements.Required_Levels
 
-				if not req then
-					if key == "BizzareRace_Chapter1" then
-						if clientData.ChapterLevels:FindFirstChild("TokyoGhoul_Chapter10") and not completed then
+					if req then
+						local canAccess = clientData.ChapterLevels:FindFirstChild(req)
+						if canAccess then
 							nextStory = { World = value.World, Level = key }
 							break
 						end
-					elseif not completed then
-						nextStory = { World = value.World, Level = key }
-						break
-					end
-				else
-					local canAccess = clientData.ChapterLevels:FindFirstChild(req)
-					if canAccess and not completed then
-						nextStory = { World = value.World, Level = key }
-						break
+					else
+						if key == "BizzareRace_Chapter1" then
+							if clientData.ChapterLevels:FindFirstChild("TokyoGhoul_Chapter10") then
+								nextStory = { World = value.World, Level = key }
+								break
+							end
+						else
+							nextStory = { World = value.World, Level = key }
+							break
+						end
 					end
 				end
 			end
