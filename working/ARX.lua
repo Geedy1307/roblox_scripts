@@ -206,6 +206,13 @@ xpcall(function()
 	local statRankList =
 		{ "O+", "O", "O-", "SSS", "SS", "S+", "S", "S-", "A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-" }
 
+	local function notify(msg, isSuccess)
+		local color = isSuccess and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+		local Notification = ReplicatedStorage.Remote.Client.Notification
+		local RemoteArgs = { "TextBarBottom", msg, color, [5] = 3 }
+		firesignal(Notification.OnClientEvent, unpack(RemoteArgs, 1, table.maxn(RemoteArgs)))
+	end
+
 	local function traitRanks()
 		local traitRankText = {}
 		local traitRankMap = {}
@@ -315,6 +322,7 @@ xpcall(function()
 			table.sort(chapterKeys, function(a, b)
 				return extractNum(a) < extractNum(b)
 			end)
+
 			table.sort(rangerKeys, function(a, b)
 				return extractNum(a) < extractNum(b)
 			end)
@@ -327,17 +335,17 @@ xpcall(function()
 					if req then
 						local canAccess = clientData.ChapterLevels:FindFirstChild(req)
 						if canAccess then
-							nextStory = { World = value.World, Level = key }
+							nextStory = value
 							break
 						end
 					else
 						if key == "BizzareRace_Chapter1" then
 							if clientData.ChapterLevels:FindFirstChild("TokyoGhoul_Chapter10") then
-								nextStory = { World = value.World, Level = key }
+								nextStory = value
 								break
 							end
 						else
-							nextStory = { World = value.World, Level = key }
+							nextStory = value
 							break
 						end
 					end
@@ -351,7 +359,7 @@ xpcall(function()
 				local onCooldown = clientData.RangerStage:FindFirstChild(key)
 
 				if canAccess and not onCooldown then
-					nextRangerStage = { World = value.World, Level = value.Wave }
+					nextRangerStage = value
 					break
 				end
 			end
@@ -432,28 +440,43 @@ xpcall(function()
 				local nextStage = getNextStage()
 				if Settings.FocusRangerStage and nextStage.nextRangerStage then
 					local rangerStage = nextStage.nextRangerStage
-					sprint("Teleport to ranger stage World: " .. rangerStage.World .. " | Level: " .. rangerStage.Level)
-					startGame("Ranger Stage", rangerStage.World, rangerStage.Level, "Nightmare")
+					notify(
+						"Teleport to Ranger Stage "
+							.. "World: "
+							.. rangerStage.World
+							.. " | Level: "
+							.. rangerStage.Wave,
+						true
+					)
+					startGame("Ranger Stage", rangerStage.World, rangerStage.Wave, "Nightmare")
 				else
 					local portal = getPortal()
 					if Settings.FocusPortal and portal then
-						sprint("Teleport to portal: " .. portal.Name)
+						notify("Teleport to portal: " .. portal.Name, true)
 						ReplicatedStorage.Remote.Server.Lobby.ItemUse:FireServer(portal)
 						wait(1)
 						ReplicatedStorage.Remote.Server.Lobby.PortalEvent:FireServer("Start")
 					else
 						if Settings.AutoNext and nextStage.nextStory then
 							local story = nextStage.nextStory
-							sprint("Tp to story World: " .. story.World .. " | Level: " .. story.Level)
-							startGame("Story", story.World, story.Level, Settings.Difficulty)
+							local mode = "Story"
+							if story.Name:find("Act") then
+								mode = "Raids Stage"
+							end
+
+							notify(
+								"Teleport to " .. mode .. " World: " .. story.World .. " | Level: " .. story.Wave,
+								true
+							)
+							startGame(mode, story.World, story.Wave, Settings.Difficulty)
 						else
 							if Settings.FocusChallenge then
-								sprint("Teleport to challenge")
+								notify("Teleport to challenge", true)
 								startGame("Challenge")
 							else
 								local mWorld = remoteWorld()
 								local mLevel = remoteLevel()
-								sprint("Teleport to story World: " .. mWorld .. " | Level: " .. mLevel)
+								notify("Teleport to story World: " .. mWorld .. " | Level: " .. mLevel, true)
 								if mWorld and mLevel then
 									startGame("Story", mWorld, mLevel, Settings.Difficulty)
 								end
@@ -503,7 +526,6 @@ xpcall(function()
 									local upgradeCost = unitData.Upgrade[unitLevel].Cost
 									local clientYen = Client:FindFirstChild("Yen") and Client.Yen.Value or 0
 									if clientYen >= upgradeCost then
-										-- sprint(tostring(unit) .. " - " .. unitLevel .. " - " .. clientYen .. " - " .. upgradeCost)
 										ReplicatedStorage.Remote.Server.Units.Upgrade:FireServer(unit)
 									end
 									break
@@ -629,74 +651,71 @@ xpcall(function()
 				local currentMode = ReplicatedStorage.Values.Game.Gamemode.Value
 
 				if result == "Won" then
-					sprint("Client won")
+					notify("Client won")
 				elseif result == "Defeat" then
-					sprint("Client is defeated")
-
-					if Settings.AutoRetry and canVoteRetry then
-						sprint("Retry story stage")
-						ReplicatedStorage.Remote.Server.OnGame.Voting.VoteRetry:FireServer()
-					else
-						local mWorld = remoteWorld()
-						local mLevel = remoteLevel()
-						sprint("Teleport to story World: " .. mWorld .. " | Level: " .. mLevel)
-						if mWorld and mLevel then
-							startGame("Story", mWorld, mLevel, Settings.Difficulty)
-						end
-					end
-
-					return
+					notify("Client is defeated")
 				end
 
 				local nextStage = getNextStage()
 
 				if Settings.FocusRangerStage and nextStage.nextRangerStage then
-					local rangerStage = nextStage.nextRangerStage
+					local rs = nextStage.nextRangerStage
+					local rsWorld = rs.World
+					local rsWave = rs.Wave
+
 					if Settings.AutoNext then
-						if currentWorld == rangerStage.World and canVoteNext then
-							sprint(
-								"Next ranger stage World: " .. rangerStage.World .. " | Level: " .. rangerStage.Level
-							)
+						if currentWorld == rsWorld and canVoteNext then
+							notify("Next Ranger Stage World: " .. rsWorld .. " | Level: " .. rsWave, true)
 							ReplicatedStorage.Remote.Server.OnGame.Voting.VoteNext:FireServer()
 						else
-							sprint(
-								"Tp to ranger stage World: " .. rangerStage.World .. " | Level: " .. rangerStage.Level
-							)
-							startGame("Ranger Stage", rangerStage.World, rangerStage.Level, "Nightmare")
+							notify("Tp to Ranger Stage World: " .. rsWorld .. " | Level: " .. rsWave, true)
+							startGame("Ranger Stage", rsWorld, rsWave, "Nightmare")
 						end
 					else
-						sprint("Retry ranger stage")
+						notify("Retry Ranger Stage", true)
 						ReplicatedStorage.Remote.Server.OnGame.Voting.VoteRetry:FireServer()
 					end
 				else
 					local portal = getPortal()
+
 					if Settings.FocusPortal and portal then
 						if canVoteRetry then
-							sprint("Retry portal")
+							notify("Retry portal", true)
 							ReplicatedStorage.Remote.Server.OnGame.Voting.VoteRetry:FireServer()
 						else
-							sprint("Teleport to portal: " .. portal.Name)
+							notify("Teleport to portal: " .. portal.Name, true)
 							ReplicatedStorage.Remote.Server.Lobby.ItemUse:FireServer(portal)
 							wait(1)
 							ReplicatedStorage.Remote.Server.Lobby.PortalEvent:FireServer("Start")
 						end
 					else
 						local story = nextStage.nextStory
+						local storyWorld = story.World
+						local storyWave = story.Wave
+
 						if Settings.AutoNext and story then
-							if currentWorld == story.World and canVoteNext then
-								sprint("Next story World: " .. story.World .. " | Level: " .. story.Level)
+							if currentWorld == storyWorld and canVoteNext then
+								notify("Next story World: " .. storyWorld .. " | Level: " .. storyWave, true)
 								ReplicatedStorage.Remote.Server.OnGame.Voting.VoteNext:FireServer()
 							else
-								sprint("Teleport to story World: " .. story.World .. " | Level: " .. story.Level)
-								startGame("Story", story.World, story.Level, Settings.Difficulty)
+								local mode = "Story"
+								if story.Name:find("Act") then
+									mode = "Raids Stage"
+								end
+
+								notify(
+									"Teleport to " .. mode .. " World: " .. storyWorld .. " | Level: " .. storyWave,
+									true
+								)
+								startGame(mode, storyWorld, storyWave, Settings.Difficulty)
 							end
 						else
 							if Settings.FocusChallenge then
 								if canVoteRetry then
-									sprint("Retry challenge")
+									notify("Retry challenge", true)
 									ReplicatedStorage.Remote.Server.OnGame.Voting.VoteRetry:FireServer()
 								else
-									sprint("Teleport to challenge")
+									notify("Teleport to challenge", true)
 									startGame("Challenge")
 								end
 							else
@@ -709,10 +728,10 @@ xpcall(function()
 										and currentMode:find("Story")
 										and canVoteRetry
 									then
-										sprint("Retry selected story")
+										notify("Retry selected story", true)
 										ReplicatedStorage.Remote.Server.OnGame.Voting.VoteRetry:FireServer()
 									else
-										sprint("Teleport to story World: " .. mWorld .. " | Level: " .. mLevel)
+										notify("Teleport to story World: " .. mWorld .. " | Level: " .. mLevel, true)
 										startGame("Story", mWorld, mLevel, Settings.Difficulty)
 									end
 								end
