@@ -203,6 +203,10 @@ xpcall(function()
 		clientRoot = clientChar:WaitForChild("HumanoidRootPart")
 	end
 
+	local currentWorld = ReplicatedStorage.Values.Game.World.Value
+	local currentLevel = ReplicatedStorage.Values.Game.Level.Value
+	local currentMode = ReplicatedStorage.Values.Game.Gamemode.Value --[[ Portal, Ranger Stage, Story, Raids Stage ]]
+
 	local statRankList =
 		{ "O+", "O", "O-", "SSS", "SS", "S+", "S", "S-", "A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-" }
 
@@ -312,7 +316,7 @@ xpcall(function()
 			local chapterKeys, rangerKeys = {}, {}
 
 			for key in next, data do
-				if key:find("RangerStage") then
+				if key:find("RangerStage1") then
 					table.insert(rangerKeys, key)
 				elseif key:find("Chapter") then
 					table.insert(chapterKeys, key)
@@ -355,14 +359,31 @@ xpcall(function()
 				end
 			end
 
-			for _, key in next, rangerKeys do
+			local firstRangerStage
+			for i, key in next, rangerKeys do
 				local value = data[key]
 				local req = value.Requirements and value.Requirements.Required_Levels
 				local canAccess = req and clientData.ChapterLevels:FindFirstChild(req)
-				if canAccess and value.Wave:find("RangerStage1") then
-					nextRangerStage = value
-					break
+
+				if canAccess then
+					if not firstRangerStage then
+						firstRangerStage = value
+					end
+
+					if value.World == currentWorld then
+						local nextKey = rangerKeys[i + 1]
+						if nextKey then
+							nextRangerStage = data[nextKey]
+						else
+							nextRangerStage = value
+						end
+						break
+					end
 				end
+			end
+
+			if not nextRangerStage then
+				nextRangerStage = firstRangerStage
 			end
 		end
 
@@ -645,17 +666,14 @@ xpcall(function()
 				-- 	wait(0.5)
 				-- end
 
-				local canVoteNext = ReplicatedStorage.Values.Game.VoteNext.VoteEnabled.Value
-				local canVoteRetry = ReplicatedStorage.Values.Game.VoteRetry.VoteEnabled.Value
-				local currentWorld = ReplicatedStorage.Values.Game.World.Value
-				local currentLevel = ReplicatedStorage.Values.Game.Level.Value
-				local currentMode = ReplicatedStorage.Values.Game.Gamemode.Value --[[ Portal, Ranger Stage, Story, Raids Stage ]]
-
 				if result == "Won" then
 					notify("Client won", true)
 				elseif result == "Defeat" then
 					notify("Client is defeated")
 				end
+
+				local canVoteNext = ReplicatedStorage.Values.Game.VoteNext.VoteEnabled.Value
+				local canVoteRetry = ReplicatedStorage.Values.Game.VoteRetry.VoteEnabled.Value
 
 				local portal = getPortal()
 				if Settings.FocusPortal and portal then
