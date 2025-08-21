@@ -713,7 +713,7 @@ xpcall(function()
 							end
 						else
 							if Settings.FocusChallenge then
-								if canVoteRetry then
+								if canVoteRetry and currentMode:find("Challenge") then
 									notify("Retry challenge", true)
 									ReplicatedStorage.Remote.Server.OnGame.Voting.VoteRetry:FireServer()
 								else
