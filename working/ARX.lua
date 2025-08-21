@@ -359,9 +359,7 @@ xpcall(function()
 				local value = data[key]
 				local req = value.Requirements and value.Requirements.Required_Levels
 				local canAccess = req and clientData.ChapterLevels:FindFirstChild(req)
-				local onCooldown = clientData.RangerStage:FindFirstChild(key)
-
-				if canAccess and not onCooldown then
+				if canAccess and value.Wave:find("RangerStage1") then
 					nextRangerStage = value
 					break
 				end
@@ -679,7 +677,7 @@ xpcall(function()
 						local rsWave = rs.Wave
 
 						if Settings.AutoNext then
-							if currentWorld == rsWorld and canVoteNext then
+							if canVoteNext then
 								notify("Next Ranger Stage World: " .. rsWorld .. " | Level: " .. rsWave, true)
 								ReplicatedStorage.Remote.Server.OnGame.Voting.VoteNext:FireServer()
 							else
