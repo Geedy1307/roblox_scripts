@@ -696,7 +696,7 @@ xpcall(function()
 
 						if Settings.AutoNext then
 							if canVoteNext then
-								notify("Next Ranger Stage World: " .. rsWorld .. " | Level: " .. rsWave, true)
+								notify("Next Ranger Stage World: " .. rsWorld, true)
 								ReplicatedStorage.Remote.Server.OnGame.Voting.VoteNext:FireServer()
 							else
 								notify("Teleport to Ranger Stage World: " .. rsWorld .. " | Level: " .. rsWave, true)
