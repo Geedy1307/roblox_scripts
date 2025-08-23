@@ -203,10 +203,6 @@ xpcall(function()
 		clientRoot = clientChar:WaitForChild("HumanoidRootPart")
 	end
 
-	local currentWorld = ReplicatedStorage.Values.Game.World.Value
-	local currentLevel = ReplicatedStorage.Values.Game.Level.Value
-	local currentMode = ReplicatedStorage.Values.Game.Gamemode.Value --[[ Portal, Ranger Stage, Story, Raids Stage ]]
-
 	local statRankList =
 		{ "O+", "O", "O-", "SSS", "SS", "S+", "S", "S-", "A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-" }
 
@@ -301,91 +297,202 @@ xpcall(function()
 	end
 
 	local function extractNum(str)
-		local chapterNum = string.match(str, "Chapter(%d+)")
-		local rangerNum = string.match(str, "RangerStage(%d+)")
-		return tonumber(chapterNum or rangerNum or math.huge)
+		return tonumber(string.match(str, "Chapter(%d+)") or string.match(str, "RangerStage(%d+)") or math.huge)
 	end
 
+	local function getLastStage(world, pattern)
+		local tempData = {}
+		for wave, data in next, require(ReplicatedStorage.Shared.Info.GameWorld.Levels[world])[tostring(world)] do
+			if tostring(wave):find(pattern) then
+				table.insert(tempData, wave)
+			end
+		end
+		table.sort(tempData, function(a, b)
+			return extractNum(a) > extractNum(b)
+		end)
+		return unpack(tempData)
+	end
+
+	local function waveData(inputData)
+		local tempData = {}
+		local _world = inputData.World
+		local _wave = inputData.Wave
+
+		for wave, data in next, require(ReplicatedStorage.Shared.Info.GameWorld.Levels[_world])[tostring(_world)] do
+			if tostring(wave):find(_wave) then
+				tempData = data
+				tempData["Wave"] = tostring(wave)
+				tempData["LastRangerStage"] = getLastStage(_world, "RangerStage")
+				tempData["LastChapter"] = getLastStage(_world, "Chapter")
+				break
+			end
+		end
+		return tempData
+	end
+
+	--[[
 	local function getNextStage()
-		local nextStory = nil
-		local nextRangerStage = nil
+		local nextStory, nextRangerStage = nil, nil
+		local chapterKeys, rangerKeys = {}, {}
 
-		for _, v in next, ReplicatedStorage.Shared.Info.GameWorld.Levels:GetChildren() do
-			local data = require(v)[tostring(v)]
-
-			local chapterKeys, rangerKeys = {}, {}
-
-			for key in next, data do
-				if key:find("RangerStage1") then
-					table.insert(rangerKeys, key)
-				elseif key:find("Chapter") then
-					table.insert(chapterKeys, key)
+		for _, module in next, ReplicatedStorage.Shared.Info.GameWorld.Levels:GetChildren() do
+			for wave, data in next, require(module)[tostring(module)] do
+				if wave:find("RangerStage1") then
+					table.insert(rangerKeys, { World = data.World, Wave = wave })
+				elseif wave:find("Chapter1") and not data.Name:find("Act") then
+					table.insert(chapterKeys, { World = data.World, Wave = wave })
 				end
 			end
+		end
 
-			table.sort(chapterKeys, function(a, b)
-				return extractNum(a) < extractNum(b)
-			end)
+		table.sort(chapterKeys, function(a, b)
+			return extractNum(a.Wave) < extractNum(b.Wave)
+		end)
+		table.sort(rangerKeys, function(a, b)
+			return extractNum(a.Wave) < extractNum(b.Wave)
+		end)
 
-			table.sort(rangerKeys, function(a, b)
-				return extractNum(a) < extractNum(b)
-			end)
+		for _, v in next, chapterKeys do
+			if not clientData.ChapterLevels:FindFirstChild(v.Wave) then
+				local data = waveData(v)
 
-			for _, key in next, chapterKeys do
-				if not clientData.ChapterLevels:FindFirstChild(key) then
-					local value = data[key]
+				if data then
+					local req = data.Requirements and data.Requirements.Required_Levels
+					local canAccess = clientData.ChapterLevels:FindFirstChild(req)
 
-					if not value.Name:find("Act") then
-						local req = value.Requirements and value.Requirements.Required_Levels
-
-						if req then
-							local canAccess = clientData.ChapterLevels:FindFirstChild(req)
-							if canAccess then
-								nextStory = value
-								break
-							end
-						else
-							if key == "BizzareRace_Chapter1" then
-								if clientData.ChapterLevels:FindFirstChild("TokyoGhoul_Chapter10") then
-									nextStory = value
-									break
-								end
-							else
-								nextStory = value
-								break
-							end
-						end
-					end
-				end
-			end
-
-			local firstRangerStage
-			for i, key in next, rangerKeys do
-				local value = data[key]
-				local req = value.Requirements and value.Requirements.Required_Levels
-				local canAccess = req and clientData.ChapterLevels:FindFirstChild(req)
-
-				if canAccess then
-					if not firstRangerStage then
-						firstRangerStage = value
-					end
-
-					if value.World == currentWorld then
-						local nextKey = rangerKeys[i + 1]
-						if nextKey then
-							nextRangerStage = data[nextKey]
-						else
-							nextRangerStage = value
+					if req and canAccess then
+						nextStory = data
+						break
+					else
+						nextStory = data
+						if
+							v.Wave == "BizzareRace_Chapter1"
+							and clientData.ChapterLevels:FindFirstChild("TokyoGhoul_Chapter10")
+						then
+							nextStory = data
 						end
 						break
 					end
 				end
 			end
+		end
 
-			if not nextRangerStage then
-				nextRangerStage = firstRangerStage
+		local firstRangerStage
+		for i, v in next, rangerKeys do
+			local data = waveData(v)
+
+			if data then
+				local req = data.Requirements and data.Requirements.Required_Levels
+				local canAccess = req and clientData.ChapterLevels:FindFirstChild(req)
+				if canAccess then
+					if not firstRangerStage then
+						firstRangerStage = data
+					end
+
+					local currentLevel = ReplicatedStorage.Values.Game.Level.Value
+					local currentWorld = ReplicatedStorage.Values.Game.World.Value
+					if currentWorld == data.World then
+						nextRangerStage = data
+
+						if data.LastRangerStage and currentLevel == data.LastRangerStage then
+							local nextKey = rangerKeys[i + 1]
+							if nextKey then
+								nextRangerStage = waveData(nextKey)
+							end
+
+							break
+						end
+					end
+				end
 			end
 		end
+
+		if not nextRangerStage then
+			nextRangerStage = firstRangerStage
+		end
+
+		return { nextStory = nextStory, nextRangerStage = nextRangerStage }
+	end
+	]]
+
+	local function canAccessWave(data)
+		local req = data.Requirements and data.Requirements.Required_Levels
+		return not req or clientData.ChapterLevels:FindFirstChild(req)
+	end
+
+	local function findNextChapter(chapterKeys)
+		for _, v in next, chapterKeys do
+			if not clientData.ChapterLevels:FindFirstChild(v.Wave) then
+				local data = waveData(v)
+				if data then
+					if canAccessWave(data) then
+						return data
+					else
+						if
+							v.Wave == "BizzareRace_Chapter1"
+							and clientData.ChapterLevels:FindFirstChild("TokyoGhoul_Chapter10")
+						then
+							return data
+						end
+						return data
+					end
+				end
+			end
+		end
+		return nil
+	end
+
+	local function findNextRanger(rangerKeys)
+		local firstRangerStage, nextRangerStage = nil, nil
+		local currentLevel = ReplicatedStorage.Values.Game.Level.Value
+		local currentWorld = ReplicatedStorage.Values.Game.World.Value
+
+		for i, v in next, rangerKeys do
+			local data = waveData(v)
+			if data and canAccessWave(data) then
+				if not firstRangerStage then
+					firstRangerStage = data
+				end
+
+				if currentWorld == data.World then
+					nextRangerStage = data
+
+					if data.LastRangerStage and currentLevel == data.LastRangerStage then
+						local nextKey = rangerKeys[i + 1]
+						if nextKey then
+							nextRangerStage = waveData(nextKey)
+						end
+					end
+					break
+				end
+			end
+		end
+
+		return nextRangerStage or firstRangerStage
+	end
+
+	local function getNextStage()
+		local chapterKeys, rangerKeys = {}, {}
+
+		for _, module in next, ReplicatedStorage.Shared.Info.GameWorld.Levels:GetChildren() do
+			for wave, data in next, require(module)[tostring(module)] do
+				if wave:find("RangerStage1") then
+					table.insert(rangerKeys, { World = data.World, Wave = wave })
+				elseif wave:find("Chapter1") and not data.Name:find("Act") then
+					table.insert(chapterKeys, { World = data.World, Wave = wave })
+				end
+			end
+		end
+
+		table.sort(chapterKeys, function(a, b)
+			return extractNum(a.Wave) < extractNum(b.Wave)
+		end)
+		table.sort(rangerKeys, function(a, b)
+			return extractNum(a.Wave) < extractNum(b.Wave)
+		end)
+
+		local nextStory = findNextChapter(chapterKeys)
+		local nextRangerStage = findNextRanger(rangerKeys)
 
 		return { nextStory = nextStory, nextRangerStage = nextRangerStage }
 	end
@@ -460,45 +567,32 @@ xpcall(function()
 		while wait(1) do
 			if Settings.AutoStart then
 				local nextStage = getNextStage()
-				if Settings.FocusRangerStage and nextStage.nextRangerStage then
-					local rangerStage = nextStage.nextRangerStage
-					notify(
-						"Teleport to Ranger Stage "
-							.. "World: "
-							.. rangerStage.World
-							.. " | Level: "
-							.. rangerStage.Wave,
-						true
-					)
-					startGame("Ranger Stage", rangerStage.World, rangerStage.Wave, "Nightmare")
+
+				local story = nextStage.nextStory
+
+				if Settings.AutoNext and story then
+					notify("Tp to Story World: " .. story.World .. " | Level: " .. story.Wave, true)
+					startGame("Story", story.World, story.Wave, Settings.Difficulty)
 				else
 					local portal = getPortal()
 					if Settings.FocusPortal and portal then
-						notify("Teleport to portal: " .. portal.Name, true)
+						notify("Tp to portal: " .. portal.Name, true)
 						ReplicatedStorage.Remote.Server.Lobby.ItemUse:FireServer(portal)
 						wait(1)
 						ReplicatedStorage.Remote.Server.Lobby.PortalEvent:FireServer("Start")
 					else
-						if Settings.AutoNext and nextStage.nextStory then
-							local story = nextStage.nextStory
-							local mode = "Story"
-							if story.Name:find("Act") then
-								mode = "Raids Stage"
-							end
-
-							notify(
-								"Teleport to " .. mode .. " World: " .. story.World .. " | Level: " .. story.Wave,
-								true
-							)
-							startGame(mode, story.World, story.Wave, Settings.Difficulty)
+						local rs = nextStage.nextRangerStage
+						if Settings.FocusRangerStage and rs then
+							notify("Tp to Ranger Stage " .. "World: " .. rs.World .. " | Level: " .. rs.Wave, true)
+							startGame("Ranger Stage", rs.World, rs.Wave, "Nightmare")
 						else
 							if Settings.FocusChallenge then
-								notify("Teleport to challenge", true)
+								notify("Tp to Challenge", true)
 								startGame("Challenge")
 							else
 								local mWorld = remoteWorld()
 								local mLevel = remoteLevel()
-								notify("Teleport to story World: " .. mWorld .. " | Level: " .. mLevel, true)
+								notify("Tp to Story World: " .. mWorld .. " | Level: " .. mLevel, true)
 								if mWorld and mLevel then
 									startGame("Story", mWorld, mLevel, Settings.Difficulty)
 								end
@@ -674,58 +768,53 @@ xpcall(function()
 
 				local canVoteNext = ReplicatedStorage.Values.Game.VoteNext.VoteEnabled.Value
 				local canVoteRetry = ReplicatedStorage.Values.Game.VoteRetry.VoteEnabled.Value
+				local currentWorld = ReplicatedStorage.Values.Game.World.Value
+				local currentLevel = ReplicatedStorage.Values.Game.Level.Value
+				local currentMode = ReplicatedStorage.Values.Game.Gamemode.Value --[[ Portal, Ranger Stage, Story, Raids Stage ]]
 
-				local portal = getPortal()
-				if Settings.FocusPortal and portal then
-					if canVoteRetry and currentMode:find("Portal") then
-						notify("Retry portal", true)
-						ReplicatedStorage.Remote.Server.OnGame.Voting.VoteRetry:FireServer()
+				local nextStage = getNextStage()
+
+				local story = nextStage.nextStory
+				if Settings.AutoNext and story then
+					local storyWorld = story.World
+					local storyWave = story.Wave
+
+					if currentWorld == storyWorld and canVoteNext then
+						notify("Next Story World: " .. storyWorld .. " | Level: " .. storyWave, true)
+						ReplicatedStorage.Remote.Server.OnGame.Voting.VoteNext:FireServer()
 					else
-						notify("Teleport to portal: " .. portal.Name, true)
-						ReplicatedStorage.Remote.Server.Lobby.ItemUse:FireServer(portal)
-						wait(1)
-						ReplicatedStorage.Remote.Server.Lobby.PortalEvent:FireServer("Start")
+						notify("Tp to Story World: " .. storyWorld .. " | Level: " .. storyWave, true)
+						startGame("Story", storyWorld, storyWave, Settings.Difficulty)
 					end
 				else
-					local nextStage = getNextStage()
-
-					local rs = nextStage.nextRangerStage
-					if Settings.FocusRangerStage and rs then
-						local rsWorld = rs.World
-						local rsWave = rs.Wave
-
-						if Settings.AutoNext then
-							if canVoteNext then
-								notify("Next Ranger Stage World: " .. rsWorld, true)
-								ReplicatedStorage.Remote.Server.OnGame.Voting.VoteNext:FireServer()
-							else
-								notify("Teleport to Ranger Stage World: " .. rsWorld .. " | Level: " .. rsWave, true)
-								startGame("Ranger Stage", rsWorld, rsWave, "Nightmare")
-							end
-						else
-							notify("Retry Ranger Stage", true)
+					local portal = getPortal()
+					if Settings.FocusPortal and portal then
+						if canVoteRetry and currentMode:find("Portal") then
+							notify("Retry Portal", true)
 							ReplicatedStorage.Remote.Server.OnGame.Voting.VoteRetry:FireServer()
+						else
+							notify("Tp to Portal: " .. portal.Name, true)
+							ReplicatedStorage.Remote.Server.Lobby.ItemUse:FireServer(portal)
+							wait(1)
+							ReplicatedStorage.Remote.Server.Lobby.PortalEvent:FireServer("Start")
 						end
 					else
-						local story = nextStage.nextStory
-						if Settings.AutoNext and story then
-							local storyWorld = story.World
-							local storyWave = story.Wave
+						local rs = nextStage.nextRangerStage
+						if Settings.FocusRangerStage and rs then
+							local rsWorld = rs.World
+							local rsWave = rs.Wave
 
-							if currentWorld == storyWorld and canVoteNext then
-								notify("Next story World: " .. storyWorld .. " | Level: " .. storyWave, true)
-								ReplicatedStorage.Remote.Server.OnGame.Voting.VoteNext:FireServer()
-							else
-								local mode = "Story"
-								if story.Name:find("Act") then
-									mode = "Raids Stage"
+							if Settings.AutoNext then
+								if canVoteNext and currentWorld == rsWorld then
+									notify("Next Ranger Stage World: " .. rsWorld, true)
+									ReplicatedStorage.Remote.Server.OnGame.Voting.VoteNext:FireServer()
+								else
+									notify("Tp to Ranger Stage World: " .. rsWorld .. " | Level: " .. rsWave, true)
+									startGame("Ranger Stage", rsWorld, rsWave, "Nightmare")
 								end
-
-								notify(
-									"Teleport to " .. mode .. " World: " .. storyWorld .. " | Level: " .. storyWave,
-									true
-								)
-								startGame(mode, storyWorld, storyWave, Settings.Difficulty)
+							else
+								notify("Retry Ranger Stage", true)
+								ReplicatedStorage.Remote.Server.OnGame.Voting.VoteRetry:FireServer()
 							end
 						else
 							if Settings.FocusChallenge then
@@ -733,7 +822,7 @@ xpcall(function()
 									notify("Retry challenge", true)
 									ReplicatedStorage.Remote.Server.OnGame.Voting.VoteRetry:FireServer()
 								else
-									notify("Teleport to challenge", true)
+									notify("Tp to challenge", true)
 									startGame("Challenge")
 								end
 							else
@@ -749,7 +838,7 @@ xpcall(function()
 										notify("Retry selected story", true)
 										ReplicatedStorage.Remote.Server.OnGame.Voting.VoteRetry:FireServer()
 									else
-										notify("Teleport to story World: " .. mWorld .. " | Level: " .. mLevel, true)
+										notify("Tp to story World: " .. mWorld .. " | Level: " .. mLevel, true)
 										startGame("Story", mWorld, mLevel, Settings.Difficulty)
 									end
 								end
@@ -978,22 +1067,22 @@ xpcall(function()
 		end,
 	})
 
-	Groups.PriorityFarm:AddToggle("FocusRangerStage", {
-		Text = "Focus Ranger Stages",
-		Default = Settings.FocusRangerStage,
-		Tooltip = "Clear all the possible ranger stages first then farm selected",
-		Callback = function(state)
-			Settings.FocusRangerStage = state
-			saveSettings()
-		end,
-	})
-
 	Groups.PriorityFarm:AddToggle("FocusPortal", {
 		Text = "Focus Portal",
 		Default = Settings.FocusPortal,
 		Tooltip = "Just farm portal",
 		Callback = function(state)
 			Settings.FocusPortal = state
+			saveSettings()
+		end,
+	})
+
+	Groups.PriorityFarm:AddToggle("FocusRangerStage", {
+		Text = "Focus Ranger Stages",
+		Default = Settings.FocusRangerStage,
+		Tooltip = "Clear all the possible ranger stages first then farm selected",
+		Callback = function(state)
+			Settings.FocusRangerStage = state
 			saveSettings()
 		end,
 	})
