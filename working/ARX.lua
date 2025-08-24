@@ -31,7 +31,7 @@ local defaultSettings = {
 	UnitSlotTraitReroll = "",
 	RankTraitReroll = "",
 	AutoTraitReroll = false,
-	FocusRangerWorld = "",
+	FocusRangerWorld = "All",
 }
 local HttpS = game:GetService("HttpService")
 local FileName = "anime_rangers_x(ID_" .. game.Players.LocalPlayer.UserId .. ").json"
@@ -267,34 +267,30 @@ xpcall(function()
 		return worlds
 	end
 
-	local function remoteWorld()
-		local world = nil
+	local function remoteWorld(world)
 		for i, v in next, ReplicatedStorage.Shared.Info.GameWorld.World:GetChildren() do
 			local module = require(v)
 			local data = module[tostring(v)]
-			if data and data.Name and data.Name:find(Settings.World) then
-				world = tostring(v)
-				break
+			if data and data.Name and data.Name:find(world) then
+				return tostring(v)
 			end
 		end
 
-		return world
+		return nil
 	end
 
 	local function remoteLevel()
-		local level = nil
-		local world = remoteWorld()
+		local world = remoteWorld(Settings.World)
 
 		if world ~= "" and world ~= nil then
 			for i, v in next, require(ReplicatedStorage.Shared.Info.GameWorld.Levels[world])[world] do
 				if v.Name == string.match(Settings.Level, "%- (.+)") then
-					level = tostring(i)
-					break
+					return tostring(i)
 				end
 			end
 		end
 
-		return level
+		return nil
 	end
 
 	local function extractNum(str)
@@ -308,9 +304,11 @@ xpcall(function()
 				table.insert(tempData, wave)
 			end
 		end
+
 		table.sort(tempData, function(a, b)
 			return extractNum(a) > extractNum(b)
 		end)
+
 		return unpack(tempData)
 	end
 
@@ -403,10 +401,10 @@ xpcall(function()
 					if wave:find("RangerStage1") then
 						table.insert(rangerKeys, { World = data.World, Wave = wave })
 
-						if data.World == Settings.FocusRangerWorld then
+						if data.World == remoteWorld(Settings.FocusRangerWorld) then
 							table.insert(focusRangerKeys, { World = data.World, Wave = wave })
 						end
-					elseif wave:find("Chapter") and not (data.Name and data.Name:find("Act")) then
+					elseif wave:find("Chapter1") and not (data.Name and data.Name:find("Act")) then
 						table.insert(chapterKeys, { World = data.World, Wave = wave })
 					end
 				end
@@ -591,7 +589,7 @@ xpcall(function()
 				end
 
 				--[[ REMOTE STORY ]]
-				local mWorld = remoteWorld()
+				local mWorld = remoteWorld(Settings.World)
 				local mLevel = remoteLevel()
 				if mWorld and mLevel then
 					firstStart("Story", mWorld, mLevel, Settings.Difficulty)
@@ -621,7 +619,7 @@ xpcall(function()
 								notify("Tp to Challenge", true)
 								startGame("Challenge")
 							else
-								local mWorld = remoteWorld()
+								local mWorld = remoteWorld(Settings.World)
 								local mLevel = remoteLevel()
 								notify("Tp to Story World: " .. mWorld .. " | Level: " .. mLevel, true)
 								if mWorld and mLevel then
@@ -900,7 +898,7 @@ xpcall(function()
 									startGame("Challenge")
 								end
 							else
-								local mWorld = remoteWorld()
+								local mWorld = remoteWorld(Settings.World)
 								local mLevel = remoteLevel()
 								if mWorld and mLevel then
 									if
@@ -966,7 +964,7 @@ xpcall(function()
 				end
 
 				--[[ REMOTE STORY ]]
-				local mWorld = remoteWorld()
+				local mWorld = remoteWorld(Settings.World)
 				local mLevel = remoteLevel()
 				if mWorld and mLevel then
 					if
@@ -1086,7 +1084,7 @@ xpcall(function()
 	local function dropdownLevels()
 		local levels = {}
 		local invalid = {}
-		local world = remoteWorld()
+		local world = remoteWorld(Settings.World)
 
 		if world ~= "" and world ~= nil then
 			for i, v in next, require(ReplicatedStorage.Shared.Info.GameWorld.Levels[world])[world] do
@@ -1219,7 +1217,7 @@ xpcall(function()
 	})
 
 	local dropRangerWorlds = dropdownWorlds(true)
-	worldsGUI = Groups.Map:AddDropdown("Focused World (Ranger Stage)", {
+	Groups.PriorityFarm:AddDropdown("Focused World (Ranger Stage)", {
 		Text = "Focused World (Ranger Stage)",
 		Default = Settings.FocusRangerWorld,
 		Values = dropRangerWorlds["allWorlds"],
