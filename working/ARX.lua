@@ -1218,7 +1218,7 @@ xpcall(function()
 
 	local dropRangerWorlds = dropdownWorlds(true)
 	Groups.PriorityFarm:AddDropdown("Focused World (Ranger Stage)", {
-		Text = "Focused World (Ranger Stage)",
+		Text = "Focus World (Ranger Stage)",
 		Default = Settings.FocusRangerWorld,
 		Values = dropRangerWorlds["allWorlds"],
 		DisabledValues = dropRangerWorlds["invalidWorlds"],
