@@ -46,8 +46,8 @@ function saveSettings()
 end
 
 local USERCONSOLE = true
-local Version = "0.0.1"
-local SubVersion = "L_Kain"
+local Version = "0.0.5"
+local SubVersion = "Kain"
 
 if not (rconsolecreate and rconsolesettitle) then
 	USERCONSOLE = false
@@ -186,10 +186,8 @@ setmetatable(Cleaner, {
 --#endregionF
 
 xpcall(function()
-	local VirtualInputManager = game:GetService("VirtualInputManager")
 	local Players = game:GetService("Players")
 	local ReplicatedStorage = game:GetService("ReplicatedStorage")
-	local RunService = game:GetService("RunService")
 	local Client = Players.LocalPlayer
 	local playerData = ReplicatedStorage:WaitForChild("Player_Data")
 	local clientData = playerData:WaitForChild(Client.Name)
@@ -516,8 +514,6 @@ xpcall(function()
 		end
 	end
 
-	local getUnitStats_module = require(ReplicatedStorage.Shared.GetData.GetUnitStats)
-
 	local function tryUpgrade(unit)
 		if not (unit and unit:FindFirstChild("Upgrade_Folder")) then
 			return false
@@ -529,7 +525,7 @@ xpcall(function()
 		end
 
 		local unitLevel = levelFolder.Value
-		local unitData = getUnitStats_module(tostring(unit))
+		local unitData = require(ReplicatedStorage.Shared.GetData.GetUnitStats)(tostring(unit))
 		if not unitData or not unitData.Upgrade then
 			return false
 		end
@@ -594,41 +590,6 @@ xpcall(function()
 				if mWorld and mLevel then
 					firstStart("Story", mWorld, mLevel, Settings.Difficulty)
 				end
-
-				--[[ local nextStage = getNextStage()
-
-				local story = nextStage.nextStory
-
-				if Settings.AutoNext and story then
-					notify("Tp to Story World: " .. story.World .. " | Level: " .. story.Wave, true)
-					startGame("Story", story.World, story.Wave, Settings.Difficulty)
-				else
-					local portal = getPortal()
-					if Settings.FocusPortal and portal then
-						notify("Tp to portal: " .. portal.Name, true)
-						ReplicatedStorage.Remote.Server.Lobby.ItemUse:FireServer(portal)
-						wait(1)
-						ReplicatedStorage.Remote.Server.Lobby.PortalEvent:FireServer("Start")
-					else
-						local rs = nextStage.nextRangerStage
-						if Settings.FocusRangerStage and rs then
-							notify("Tp to Ranger Stage " .. "World: " .. rs.World .. " | Level: " .. rs.Wave, true)
-							startGame("Ranger Stage", rs.World, rs.Wave, "Nightmare")
-						else
-							if Settings.FocusChallenge then
-								notify("Tp to Challenge", true)
-								startGame("Challenge")
-							else
-								local mWorld = remoteWorld(Settings.World)
-								local mLevel = remoteLevel()
-								notify("Tp to Story World: " .. mWorld .. " | Level: " .. mLevel, true)
-								if mWorld and mLevel then
-									startGame("Story", mWorld, mLevel, Settings.Difficulty)
-								end
-							end
-						end
-					end
-				end ]]
 			end
 		end
 	end)
@@ -788,21 +749,21 @@ xpcall(function()
 				until Client.PlayerGui:FindFirstChild("GameEndedAnimationUI")
 				wait(5)
 
-				-- local function getScreenCenter()
-				-- 	local viewportSize = workspace.CurrentCamera.ViewportSize
-				-- 	return viewportSize.X * 0.1, viewportSize.Y * 0.8
-				-- end
+				--[[ local function getScreenCenter()
+					local viewportSize = workspace.CurrentCamera.ViewportSize
+					return viewportSize.X * 0.1, viewportSize.Y * 0.8
+				end
 
-				-- local function autoClick()
-				-- 	local x, y = getScreenCenter()
-				-- 	VirtualInputManager:SendMouseButtonEvent(x, y, 0, true, game, 0)
-				-- 	VirtualInputManager:SendMouseButtonEvent(x, y, 0, false, game, 0)
-				-- end
+				local function autoClick()
+					local x, y = getScreenCenter()
+					VirtualInputManager:SendMouseButtonEvent(x, y, 0, true, game, 0)
+					VirtualInputManager:SendMouseButtonEvent(x, y, 0, false, game, 0)
+				end
 
-				-- for i = 1, 10 do
-				-- 	autoClick()
-				-- 	wait(0.5)
-				-- end
+				for i = 1, 10 do
+					autoClick()
+					wait(0.5)
+				end ]]
 
 				if result == "Won" then
 					notify("Client won", true)
@@ -816,108 +777,6 @@ xpcall(function()
 				local currentLevel = ReplicatedStorage.Values.Game.Level.Value
 				local currentMode = ReplicatedStorage.Values.Game.Gamemode.Value
 				local nextStage = getNextStage()
-
-				--[[ local story = nextStage.nextStory
-				if Settings.AutoNext and story then
-					local storyWorld = story.World
-					local storyWave = story.Wave
-
-					if currentWorld == storyWorld and canVoteNext then
-						notify("Next Story World: " .. storyWorld .. " | Level: " .. storyWave, true)
-						ReplicatedStorage.Remote.Server.OnGame.Voting.VoteNext:FireServer()
-					else
-						notify("Tp to Story World: " .. storyWorld .. " | Level: " .. storyWave, true)
-						startGame("Story", storyWorld, storyWave, Settings.Difficulty)
-					end
-				else
-					local portal = getPortal()
-					if Settings.FocusPortal and portal then
-						if canVoteRetry and currentMode:find("Portal") then
-							notify("Retry Portal", true)
-							ReplicatedStorage.Remote.Server.OnGame.Voting.VoteRetry:FireServer()
-						else
-							notify("Tp to Portal: " .. portal.Name, true)
-							ReplicatedStorage.Remote.Server.Lobby.ItemUse:FireServer(portal)
-							wait(1)
-							ReplicatedStorage.Remote.Server.Lobby.PortalEvent:FireServer("Start")
-						end
-					else
-						if Settings.FocusRangerStage then
-							if Settings.FocusRangerWorld == "All" then
-								local rs = nextStage.nextRangerStage
-								if rs then
-									local rsWorld = rs.World
-									local rsWave = rs.Wave
-
-									if Settings.AutoNext then
-										if canVoteNext and currentWorld == rsWorld then
-											notify("Next Ranger Stage World: " .. rsWorld, true)
-											ReplicatedStorage.Remote.Server.OnGame.Voting.VoteNext:FireServer()
-										else
-											notify(
-												"Tp to Ranger Stage World: " .. rsWorld .. " | Level: " .. rsWave,
-												true
-											)
-											startGame("Ranger Stage", rsWorld, rsWave, "Nightmare")
-										end
-									else
-										notify("Retry Ranger Stage", true)
-										ReplicatedStorage.Remote.Server.OnGame.Voting.VoteRetry:FireServer()
-									end
-								end
-							else
-								local rs = nextStage.nextFocusRangerStage
-								if rs then
-									local rsWorld = rs.World
-									local rsWave = rs.Wave
-
-									if Settings.AutoNext then
-										if canVoteNext and currentWorld == rsWorld then
-											notify("Next focus Ranger Stage World: " .. rsWorld, true)
-											ReplicatedStorage.Remote.Server.OnGame.Voting.VoteNext:FireServer()
-										else
-											notify(
-												"Tp to focus Ranger Stage World: " .. rsWorld .. " | Level: " .. rsWave,
-												true
-											)
-											startGame("Ranger Stage", rsWorld, rsWave, "Nightmare")
-										end
-									else
-										notify("Retry focus Ranger Stage", true)
-										ReplicatedStorage.Remote.Server.OnGame.Voting.VoteRetry:FireServer()
-									end
-								end
-							end
-						else
-							if Settings.FocusChallenge then
-								if canVoteRetry and currentMode:find("Challenge") then
-									notify("Retry challenge", true)
-									ReplicatedStorage.Remote.Server.OnGame.Voting.VoteRetry:FireServer()
-								else
-									notify("Tp to challenge", true)
-									startGame("Challenge")
-								end
-							else
-								local mWorld = remoteWorld(Settings.World)
-								local mLevel = remoteLevel()
-								if mWorld and mLevel then
-									if
-										currentWorld == mWorld
-										and currentLevel == mLevel
-										and currentMode:find("Story")
-										and canVoteRetry
-									then
-										notify("Retry selected story", true)
-										ReplicatedStorage.Remote.Server.OnGame.Voting.VoteRetry:FireServer()
-									else
-										notify("Tp to selected story World: " .. mWorld .. " | Level: " .. mLevel, true)
-										startGame("Story", mWorld, mLevel, Settings.Difficulty)
-									end
-								end
-							end
-						end
-					end
-				end ]]
 
 				--[[ UNFINISHED STORY ]]
 				local story = nextStage.nextStory
@@ -1209,7 +1068,7 @@ xpcall(function()
 	Groups.PriorityFarm:AddToggle("FocusPortal", {
 		Text = "Focus Portal",
 		Default = Settings.FocusPortal,
-		Tooltip = "Just farm portal",
+		Tooltip = "#2 Priority",
 		Callback = function(state)
 			Settings.FocusPortal = state
 			saveSettings()
@@ -1232,7 +1091,7 @@ xpcall(function()
 	Groups.PriorityFarm:AddToggle("FocusRangerStage", {
 		Text = "Focus Ranger Stages",
 		Default = Settings.FocusRangerStage,
-		Tooltip = "Clear all the possible ranger stages first then farm selected",
+		Tooltip = "#3 Priority",
 		Callback = function(state)
 			Settings.FocusRangerStage = state
 			saveSettings()
@@ -1242,7 +1101,7 @@ xpcall(function()
 	Groups.PriorityFarm:AddToggle("FocusChallenge", {
 		Text = "Focus Challenge",
 		Default = Settings.FocusChallenge,
-		Tooltip = "Just farm challenge",
+		Tooltip = "#4 Priority",
 		Callback = function(state)
 			Settings.FocusChallenge = state
 			saveSettings()
