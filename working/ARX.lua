@@ -514,7 +514,7 @@ xpcall(function()
 		end
 	end
 
-	local function tryUpgrade(unit)
+	--[[ local function tryUpgrade(unit)
 		if not (unit and unit:FindFirstChild("Upgrade_Folder")) then
 			return false
 		end
@@ -543,6 +543,32 @@ xpcall(function()
 		end
 
 		return false
+	end ]]
+
+	local function tryUpgrade(unit)
+		if not (unit and unit:FindFirstChild("Upgrade_Folder")) then
+			return "Invalid"
+		end
+
+		local level = unit.Upgrade_Folder.Level.Value
+		local data = require(ReplicatedStorage.Shared.GetData.GetUnitStats)(tostring(unit))
+		if not data or not data.Upgrade then
+			return "NoData"
+		end
+
+		if level > #data.Upgrade then
+			return "Maxed"
+		end
+
+		local cost = data.Upgrade[level].Cost
+		local yen = (Client:FindFirstChild("Yen") and Client.Yen.Value) or 0
+
+		if yen >= cost then
+			ReplicatedStorage.Remote.Server.Units.Upgrade:FireServer(unit)
+			return "Upgraded"
+		else
+			return "NotEnoughMoney"
+		end
 	end
 
 	local loopStartGame = coroutine.create(function()
@@ -609,8 +635,28 @@ xpcall(function()
 
 	local loopAutoUpgrade = coroutine.create(function()
 		if Client:FindFirstChild("UnitsFolder") then
+			local upgradeIndex = 1
+
 			while wait(0.1) do
 				if Settings.AutoUpgrade and #Settings.UpgradePriorities > 0 then
+					local slotsMap = getSlotMap()
+					local slot = Settings.UpgradePriorities[upgradeIndex]
+					local targetTag = slotsMap and slotsMap[slot]
+					if targetTag then
+						local unit = unitUpgrade(targetTag)
+						local result = tryUpgrade(unit)
+
+						if result == "Maxed" or result == "NoData" or result == "Invalid" then
+							upgradeIndex += 1
+							if upgradeIndex > #Settings.UpgradePriorities then
+								upgradeIndex = 1
+							end
+						end
+					else
+						upgradeIndex += 1
+					end
+				end
+				--[[ if Settings.AutoUpgrade and #Settings.UpgradePriorities > 0 then
 					local slotsMap = getSlotMap()
 					if slotsMap and #workspace.Agent.Agent:GetChildren() > 0 then
 						for _, slot in next, Settings.UpgradePriorities do
@@ -618,37 +664,6 @@ xpcall(function()
 							if targetTag then
 								local unit = unitUpgrade(targetTag)
 								if tryUpgrade(unit) then
-									break
-								end
-							end
-						end
-					end
-				end
-
-				--[[ if Settings.AutoUpgrade and #Settings.UpgradePriorities > 0 then
-					local slotsMap = getSlotMap()
-					if slotsMap and #workspace.Agent.Agent:GetChildren() > 0 then
-						for _, slot in next, Settings.UpgradePriorities do
-							local targetTag = slotsMap[slot]
-							if not targetTag then
-								continue
-							end
-
-							local unit = unitUpgrade(targetTag)
-							if
-								unit
-								and unit:FindFirstChild("Upgrade_Folder")
-								and unit.Upgrade_Folder:FindFirstChild("Level")
-							then
-								local unitLevel = unit.Upgrade_Folder.Level.Value
-								local unitData = require(ReplicatedStorage.Shared.GetData.GetUnitStats)(tostring(unit))
-
-								if unitLevel <= #unitData.Upgrade then
-									local upgradeCost = unitData.Upgrade[unitLevel].Cost
-									local clientYen = Client:FindFirstChild("Yen") and Client.Yen.Value or 0
-									if clientYen >= upgradeCost then
-										ReplicatedStorage.Remote.Server.Units.Upgrade:FireServer(unit)
-									end
 									break
 								end
 							end
